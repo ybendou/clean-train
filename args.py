@@ -26,8 +26,8 @@ To train CIFARFS (few-shot) with 86.83% accuracy (70.27% in 1-shot) (3h):
 python main.py --dataset cifarfs --mixup --model wideresnet --feature-maps 16 --skip-epochs 300
 To train MiniImageNet (few-shot) with 80.43% accuracy (64.11% in 1-shot) (2h):
 python main.py --dataset miniimagenet --model resnet12 --gamma 0.2 --milestones '[30,60,90]' --epochs 120 --batch-size 128 --preprocessing 'EME'
-To train MiniImageNet (few-shot) with xx accuracy ():
-python main.py --dataset miniimagenet --mixup --feature-maps 16 --model wideresnet --training "[(400, -0.001)]"
+To train MiniImageNet (few-shot) with 82.43% accuracy (65.63% in 1-shot) (40h):
+python main.py --dataset miniimagenet --feature-maps 16 --model S2M2R --lr -0.001 --epochs 600 --milestones '[]' --rotations
 """, formatter_class=argparse.RawTextHelpFormatter)
 
 ### hyperparameters
