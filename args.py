@@ -31,7 +31,7 @@ python main.py --dataset miniimagenet --feature-maps 16 --model S2M2R --lr -0.00
 """, formatter_class=argparse.RawTextHelpFormatter)
 
 ### hyperparameters
-parser.add_argument("--batch-size", type=int, default=64, help="batch_size")
+parser.add_argument("--batch-size", type=int, default=64, help="batch size")
 parser.add_argument("--feature-maps", type=int, default=64, help="number of feature maps")
 parser.add_argument("--lr", type=float, default="0.1", help="initial learning rate (negative is for Adam, e.g. -0.001)")
 parser.add_argument("--epochs", type=int, default=350, help="total number of epochs")
@@ -39,9 +39,7 @@ parser.add_argument("--milestones", type=str, default="[100,200,300]", help="mil
 parser.add_argument("--gamma", type=float, default=0.1, help="multiplier for lr at milestones")
 parser.add_argument("--mixup", action="store_true", help="use of mixup since beginning")
 parser.add_argument("--rotations", action="store_true", help="use of rotations self-supervision during training")
-parser.add_argument("--alpha", type=float, default = 0., help="multiplier inside gaussian")
 parser.add_argument("--model", type=str, default="ResNet18", help="model to train")
-parser.add_argument("--skip-epochs", type=int, default="0", help="number of epochs to skip before evaluating few-shot performance")
 parser.add_argument("--preprocessing", type=str, default="PEME", help="preprocessing sequence for few shot, can contain P:sqrt E:sphering and M:centering")
 
 ### pytorch options
@@ -50,6 +48,7 @@ parser.add_argument("--dataset-path", type=str, default=os.environ.get("DATASETS
 parser.add_argument("--dataset-device", type=str, default="", help="use a different device for storing the datasets (use 'cpu' if you are lacking VRAM)")
 
 ### run options
+parser.add_argument("--skip-epochs", type=int, default="0", help="number of epochs to skip before evaluating few-shot performance")
 parser.add_argument("--runs", type=int, default=1, help="number of runs")
 parser.add_argument("--quiet", action="store_true", help="prevent too much display of info")
 parser.add_argument("--dataset", type=str, default="CIFAR10", help="dataset to use")
