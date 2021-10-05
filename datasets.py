@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import json
 
-class OldDataset():
+class CPUDataset():
     def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, device = args.dataset_device):
         self.data = data
         if torch.is_tensor(data):
@@ -48,7 +48,7 @@ class Dataset():
 
 def iterator(data, target, transforms, forcecpu = False, shuffle = True):
     if args.dataset_device == "cpu" or forcecpu:
-        dataset = OldDataset(data, target, transforms)
+        dataset = CPUDataset(data, target, transforms)
         return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = 4)
     else:
         return Dataset(data, target, transforms, shuffle = shuffle)

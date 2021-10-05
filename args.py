@@ -41,9 +41,10 @@ parser.add_argument("--mixup", action="store_true", help="use of mixup since beg
 parser.add_argument("--rotations", action="store_true", help="use of rotations self-supervision during training")
 parser.add_argument("--model", type=str, default="ResNet18", help="model to train")
 parser.add_argument("--preprocessing", type=str, default="PEME", help="preprocessing sequence for few shot, can contain P:sqrt E:sphering and M:centering")
+parser.add_argument("--manifold-mixup", type=int, default="0", help="deploy manifold mixup as fine-tuning as in S2M2R for the given number of epochs, to be used only with S2M2R model")
 
 ### pytorch options
-parser.add_argument("--device", type=str, default="cuda:0", help="device to use")
+parser.add_argument("--device", type=str, default="cuda:0", help="device(s) to use, for multiple GPUs try cuda:ijk, will not work with 10+ GPUs")
 parser.add_argument("--dataset-path", type=str, default=os.environ.get("DATASETS"), help="dataset path")
 parser.add_argument("--dataset-device", type=str, default="", help="use a different device for storing the datasets (use 'cpu' if you are lacking VRAM)")
 
@@ -66,3 +67,10 @@ if args.dataset_device == "":
     args.dataset_device = args.device
 if args.dataset_path[-1] != '/':
     args.dataset_path += "/"
+if args.device[:5] == "cuda:" and len(args.device) > 5:
+    args.devices = []
+    for i in range(len(args.device) - 5):
+        args.devices.append(int(args.device[i+5]))
+    args.device = args.device[:6]
+else:
+    args.devices = [args.device]

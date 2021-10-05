@@ -24,7 +24,7 @@ print("done")
 
 ### global variables that are used by the train function
 last_update, criterion = 0, torch.nn.CrossEntropyLoss()
-def train(model, train_loader, optimizer, epoch, mixup = False):
+def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
     model.train()
     global last_update
     
@@ -38,7 +38,23 @@ def train(model, train_loader, optimizer, epoch, mixup = False):
         # reset gradients
         optimizer.zero_grad()
 
-        if args.rotations:
+        if mm: # as in method S2M2R, to be used in combination with rotations, only implemented for wideresnet "S2M2R" model
+            # if you do not understand what I just wrote, then just ignore this option, it might be better for now
+            new_chunks = []
+            sizes = torch.chunk(target, len(args.devices))
+            for i in range(len(args.devices)):
+                new_chunks.append(torch.randperm(sizes[i].shape[0]))
+            index_mixup = torch.cat(new_chunks, dim = 0)
+            #index_mixup = torch.randperm(data.shape[0])
+            lam = np.random.beta(2, 2)
+            depth = random.randint(0, 3)
+            output, _ = model(data, mixup_layer = depth, index_mixup = index_mixup, lam = lam)
+            if args.rotations:
+                output, _ = output
+            loss_mm = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
+            loss_mm.backward()
+
+        if args.rotations: # generate self-supervised rotations for improved universality of feature vectors
             bs = data.shape[0] // 4
             target_rot = torch.LongTensor(data.shape[0]).to(args.device)
             target_rot[:bs] = 0
@@ -49,7 +65,7 @@ def train(model, train_loader, optimizer, epoch, mixup = False):
             data[3*bs:] = data[3*bs:].transpose(3,2).flip(2)
             target_rot[3*bs:] = 3
 
-        if mixup:
+        if mixup: # classical mixup
             index_mixup = torch.randperm(data.shape[0])
             lam = random.random()
             data_mixed = lam * data + (1 - lam) * data[index_mixup]
@@ -137,9 +153,9 @@ def train_complete(model, loaders, mixup = False):
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = eval(args.milestones), gamma = args.gamma)
         
         
-    for epoch in range(args.epochs):
+    for epoch in range(args.epochs + args.manifold_mixup):
 
-        train_stats = train(model, train_loader, optimizer, (epoch + 1), mixup = mixup)
+        train_stats = train(model, train_loader, optimizer, (epoch + 1), mixup = mixup, mm = epoch >= args.epochs)
 
         scheduler.step()
         
@@ -233,6 +249,9 @@ for i in range(args.runs):
     if not args.quiet:
         print(args)
     model = create_model()
+
+    if len(args.devices) > 1:
+        model = torch.nn.DataParallel(model, device_ids = args.devices)
     
     if i == 0:
         print("Number of trainable parameters in model is: " + str(np.sum([p.numel() for p in model.parameters()])))

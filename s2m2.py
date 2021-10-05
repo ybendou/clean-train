@@ -95,8 +95,8 @@ class S2M2R(nn.Module):
             out = self.blocks[i](out)
             if mixup_layer == i + 1:
                 out = lam * out + (1 - lam) * out[index_mixup]
-        out = torch.tanh(self.bn(out))
-        out = F.avg_pool2d(F.relu(out), out.size()[2:])
+        out = torch.relu(self.bn(out))
+        out = F.avg_pool2d(out, out.size()[2:])
         out = out.view(out.size(0), -1)
         features = out
         out = self.linear(features)
