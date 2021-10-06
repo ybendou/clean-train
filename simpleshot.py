@@ -47,8 +47,9 @@ def ncm(features, run_classes, run_indices, n_shots = n_shots):
     with torch.no_grad():
         dim = features.shape[2]
         targets = torch.arange(n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
-        features = torch.relu(features)
         for i in range(len(args.preprocessing)):
+            if args.preprocessing[i] == 'R':
+                features = torch.relu(features)
             if args.preprocessing[i] == 'P':
                 features = power(features)
             if args.preprocessing[i] == 'E':

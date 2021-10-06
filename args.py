@@ -40,7 +40,7 @@ parser.add_argument("--gamma", type=float, default=0.1, help="multiplier for lr 
 parser.add_argument("--mixup", action="store_true", help="use of mixup since beginning")
 parser.add_argument("--rotations", action="store_true", help="use of rotations self-supervision during training")
 parser.add_argument("--model", type=str, default="ResNet18", help="model to train")
-parser.add_argument("--preprocessing", type=str, default="PEME", help="preprocessing sequence for few shot, can contain P:sqrt E:sphering and M:centering")
+parser.add_argument("--preprocessing", type=str, default="RPEME", help="preprocessing sequence for few shot, can contain R:relu P:sqrt E:sphering and M:centering")
 parser.add_argument("--manifold-mixup", type=int, default="0", help="deploy manifold mixup as fine-tuning as in S2M2R for the given number of epochs, to be used only with S2M2R model")
 
 ### pytorch options
