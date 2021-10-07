@@ -6,9 +6,7 @@ n_runs = 10000
 batch_few_shot_runs = 100
 assert(n_runs % batch_few_shot_runs == 0)
 n_ways = 5
-n_shots = 5
 n_queries = 15
-n_samples = n_shots + n_queries
 
 def define_runs(n_ways, n_shots, n_queries, num_classes, elements_per_class):
     shuffle_classes = torch.LongTensor(np.arange(num_classes))
@@ -43,7 +41,7 @@ def centering(features):
     features = feat.reshape(features.shape)
     return features
 
-def ncm(features, run_classes, run_indices, n_shots = n_shots):
+def ncm(features, run_classes, run_indices, n_shots):
     with torch.no_grad():
         dim = features.shape[2]
         targets = torch.arange(n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
@@ -60,7 +58,7 @@ def ncm(features, run_classes, run_indices, n_shots = n_shots):
         for batch_idx in range(n_runs // batch_few_shot_runs):
             runs = generate_runs(features, run_classes, run_indices, batch_idx)
             means = torch.mean(runs[:,:,:n_shots], dim = 2)
-            distances = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, n_ways, 1, n_samples - n_shots, dim) - means.reshape(batch_few_shot_runs, 1, n_ways, 1, dim), dim = 4, p = 2)
+            distances = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, n_ways, 1, dim), dim = 4, p = 2)
             winners = torch.min(distances, dim = 2)[1]
             score += (winners == targets).float().mean().item()
         return score / (batch_idx + 1)
@@ -72,6 +70,8 @@ def get_features(model, loader):
         with torch.no_grad():
             data, target = data.to(args.device), target.to(args.device)
             _, features = model(data)
+            if args.rotations:
+                features, _ = features
             all_features.append(features)
             offset = min(min(target), offset)
             max_offset = max(max(target), max_offset)
@@ -84,7 +84,7 @@ def eval_few_shot(val_features, test_features, val_run_classes, val_run_indices,
 def update_few_shot_meta_data(model, test_loader, val_loader, few_shot_meta_data):
     val_features = get_features(model, val_loader)
     test_features = get_features(model, test_loader)
-    val_acc_5, test_acc_5 = eval_few_shot(val_features, test_features, few_shot_meta_data["val_run_classes"], few_shot_meta_data["val_run_indices"], few_shot_meta_data["novel_run_classes"], few_shot_meta_data["novel_run_indices"], n_shots = 5)
+    val_acc_5, test_acc_5 = eval_few_shot(val_features, test_features, few_shot_meta_data["val_run_classes_5"], few_shot_meta_data["val_run_indices_5"], few_shot_meta_data["novel_run_classes_5"], few_shot_meta_data["novel_run_indices_5"], n_shots = 5)
     if val_acc_5 > few_shot_meta_data["best_val_acc_5"]:
         if args.save_model != "":
             torch.save(model, args.save_model + "5")
@@ -92,7 +92,7 @@ def update_few_shot_meta_data(model, test_loader, val_loader, few_shot_meta_data
             torch.save(test_features, args.save_features + "5")
         few_shot_meta_data["best_val_acc_5"] = val_acc_5
         few_shot_meta_data["best_test_acc_5"] = test_acc_5
-    val_acc_1, test_acc_1 = eval_few_shot(val_features, test_features, few_shot_meta_data["val_run_classes"], few_shot_meta_data["val_run_indices"], few_shot_meta_data["novel_run_classes"], few_shot_meta_data["novel_run_indices"], n_shots = 1)
+    val_acc_1, test_acc_1 = eval_few_shot(val_features, test_features, few_shot_meta_data["val_run_classes_1"], few_shot_meta_data["val_run_indices_1"], few_shot_meta_data["novel_run_classes_1"], few_shot_meta_data["novel_run_indices_1"], n_shots = 1)
     if val_acc_1 > few_shot_meta_data["best_val_acc_1"]:
         if args.save_model != "":
             torch.save(model, args.save_model + "1")

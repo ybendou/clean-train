@@ -20,6 +20,7 @@ from wideresnet import *
 from resnet12 import *
 from s2m2 import *
 from mlp import *
+from resnet12hu import *
 print("done")
 
 ### global variables that are used by the train function
@@ -145,19 +146,17 @@ def train_complete(model, loaders, mixup = False):
         few_shot_meta_data["best_val_acc_1"] = 0
         few_shot_meta_data["best_val_acc_5"] = 0
 
-    if lr < 0:
-        optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr)
-    else:
-        optimizer = torch.optim.SGD(model.parameters(), lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
-
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = eval(args.milestones), gamma = args.gamma)
-        
-        
     for epoch in range(args.epochs + args.manifold_mixup):
 
-        train_stats = train(model, train_loader, optimizer, (epoch + 1), mixup = mixup, mm = epoch >= args.epochs)
+        if epoch in eval(args.milestones):
+            lr = lr * args.gamma
+            
+        if lr < 0:
+            optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr)
+        else:
+            optimizer = torch.optim.SGD(model.parameters(), lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
 
-        scheduler.step()
+        train_stats = train(model, train_loader, optimizer, (epoch + 1), mixup = mixup, mm = epoch >= args.epochs)
         
         if args.save_model != "" and not few_shot:
             torch.save(model, args.save_model)
@@ -188,13 +187,19 @@ if few_shot:
     else:
         elements_val, elements_novel = [elements_per_class] * val_classes, [elements_per_class] * novel_classes
     print("Dataset contains",num_classes,"base classes,",val_classes,"val classes and",novel_classes,"novel classes.")
-    val_run_classes, val_run_indices = define_runs(n_ways, n_shots, n_queries, val_classes, elements_val)
-    novel_run_classes, novel_run_indices = define_runs(n_ways, n_shots, n_queries, novel_classes, elements_novel)
+    val_run_classes_1, val_run_indices_1 = define_runs(n_ways, 1, n_queries, val_classes, elements_val)
+    novel_run_classes_1, novel_run_indices_1 = define_runs(n_ways, 1, n_queries, novel_classes, elements_novel)
+    val_run_classes_5, val_run_indices_5 = define_runs(n_ways, 5, n_queries, val_classes, elements_val)
+    novel_run_classes_5, novel_run_indices_5 = define_runs(n_ways, 5, n_queries, novel_classes, elements_novel)
     few_shot_meta_data = {
-        "val_run_classes" : val_run_classes,
-        "val_run_indices" : val_run_indices,
-        "novel_run_classes" : novel_run_classes,
-        "novel_run_indices" : novel_run_indices,
+        "val_run_classes_1" : val_run_classes_1,
+        "val_run_indices_1" : val_run_indices_1,
+        "novel_run_classes_1" : novel_run_classes_1,
+        "novel_run_indices_1" : novel_run_indices_1,
+        "val_run_classes_5" : val_run_classes_5,
+        "val_run_indices_5" : val_run_indices_5,
+        "novel_run_classes_5" : novel_run_classes_5,
+        "novel_run_indices_5" : novel_run_indices_5,
         "best_val_acc_5" : 0,
         "best_val_acc_1" : 0,
         "best_test_acc_5" : 0,
@@ -231,6 +236,8 @@ def create_model():
         return MLP(args.feature_maps, int(args.model[3:]), input_shape, num_classes, args.rotations, few_shot).to(args.device)
     if args.model.lower() == "s2m2r":
         return S2M2R(args.feature_maps, input_shape, args.rotations, num_classes = num_classes).to(args.device)
+    if args.model.lower() == "resnet12hu":
+        return resnet12hu().to(args.device)
     
 if args.load_model != "":
     model = torch.load(args.load_model).to(args.device)

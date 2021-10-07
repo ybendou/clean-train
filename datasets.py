@@ -5,7 +5,7 @@ import torch
 import json
 
 class CPUDataset():
-    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, device = args.dataset_device):
+    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False):
         self.data = data
         if torch.is_tensor(data):
             self.length = data.shape[0]
@@ -16,8 +16,13 @@ class CPUDataset():
         self.batch_size = batch_size
         self.transforms = transforms
         self.n_batches = self.length // self.batch_size + (0 if self.length % self.batch_size == 0 else 1)
+        self.use_hd = use_hd
     def __getitem__(self, idx):
-        return self.transforms(self.data[idx]), self.targets[idx]
+        if self.use_hd:
+            elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB')))
+        else:
+            elt = self.data[idx]
+        return self.transforms(elt), self.targets[idx]
     def __len__(self):
         return self.length
 
@@ -46,10 +51,10 @@ class Dataset():
     def __len__(self):
         return self.n_batches
 
-def iterator(data, target, transforms, forcecpu = False, shuffle = True):
+def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False):
     if args.dataset_device == "cpu" or forcecpu:
-        dataset = CPUDataset(data, target, transforms)
-        return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = 4)
+        dataset = CPUDataset(data, target, transforms, use_hd = use_hd)
+        return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = 32)
     else:
         return Dataset(data, target, transforms, shuffle = shuffle)
 
@@ -72,17 +77,6 @@ def mnist():
             test.append(torch.zeros(args.dataset_size // 10) + i)
         train_data = torch.stack(data_per_class, dim = 1).view(args.dataset_size, 1, 28, 28)
         train_targets = torch.arange(10).repeat(args.dataset_size // 10)
-    # index = random.randint(0, args.dataset_size - 1)
-    # print(train_data.shape)
-    # for i in range(train_data.shape[2]):
-    #     for j in range(train_data.shape[3]):
-    #         if train_data[index][0][i][j] > 0.:
-    #             print(" ", end='')
-    #         else:
-    #             print('+', end='')
-    #     print()
-    # print(index, train_targets[index])
-    # print(train_targets[:20])
     test_loader = datasets.MNIST(args.dataset_path, train = False, download = True)
     test_data = (test_loader.data.float() / 256).unsqueeze(1)
     test_targets = torch.LongTensor(test_loader.targets.clone())
@@ -204,12 +198,11 @@ def cifarfs(data_augmentation = True):
 
 from PIL import Image
 
-def miniImageNet():
+def miniImageNet(use_hd = True):
     datasets = {}
     classes = []
     total = 60000
     count = 0
-    print("loading all images in memory, that might take a while")
     for subset in ["train", "validation", "test"]:
         data = []
         target = []
@@ -225,17 +218,20 @@ def miniImageNet():
                         classes.append(c)
                     count += 1
                     target.append(len(classes) - 1)
-                    image = transforms.ToTensor()(np.array(Image.open(args.dataset_path + "miniimagenetimages/" + "images/" + fn).convert('RGB')))
-                    data.append(image)
-                    if count % 1000 == 0:
-                        print("\r{:d}/{:d}".format(count, total), end = '')
+                    path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
+                    if not use_hd:
+                        image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
+                        data.append(image)
+                    else:
+                        data.append(path)
         datasets[subset] = [data, torch.LongTensor(target)]
     print()
-    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), transforms.Normalize((0.4712, 0.4499, 0.4031) ,(0.2843, 0.2753, 0.2903)))
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), transforms.Normalize((0.4712, 0.4499, 0.4021), (0.2843, 0.2753, 0.2903)))
-    train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True)
-    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False)
-    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False)
+    norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
+    train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
+    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     return (train_loader, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 import pickle
@@ -317,8 +313,9 @@ def miniImageNet84():
     with open(args.dataset_path + "miniimagenet/validation.pkl", 'rb') as f:
         validation_file = pickle.load(f)
     validation, validation_targets = [transforms.ToTensor()(x) for x in validation_file["data"]], validation_file["labels"]
-    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), transforms.Normalize((0.4712, 0.4499, 0.4031) ,(0.2843, 0.2753, 0.2903)))
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), transforms.Normalize((0.4712, 0.4499, 0.4031), (0.2843, 0.2753, 0.2903)))
+    norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
     train_loader = iterator(train, train_targets, transforms = train_transforms, forcecpu = True)
     val_loader = iterator(validation, validation_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     test_loader = iterator(test, test_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
