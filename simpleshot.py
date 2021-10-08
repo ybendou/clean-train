@@ -2,11 +2,11 @@ import torch
 import numpy as np
 from args import *
 
-n_runs = 10000
+n_runs = args.n_runs
 batch_few_shot_runs = 100
 assert(n_runs % batch_few_shot_runs == 0)
-n_ways = 5
-n_queries = 15
+n_ways = args.n_ways
+n_queries = args.n_queries
 
 def define_runs(n_ways, n_shots, n_queries, num_classes, elements_per_class):
     shuffle_classes = torch.LongTensor(np.arange(num_classes))

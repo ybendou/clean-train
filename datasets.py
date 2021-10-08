@@ -19,7 +19,7 @@ class CPUDataset():
         self.use_hd = use_hd
     def __getitem__(self, idx):
         if self.use_hd:
-            elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB')))
+            elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB'))).to(args.dataset_device)
         else:
             elt = self.data[idx]
         return self.transforms(elt), self.targets[idx]

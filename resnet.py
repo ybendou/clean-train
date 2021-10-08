@@ -1,3 +1,4 @@
+from utils import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -35,10 +36,10 @@ class ResNet(nn.Module):
         for i, nb in enumerate(num_blocks):
             layers.append(self._make_layer(block, (2 ** i) * feature_maps, nb, stride = 1 if i == 0 else 2))
         self.layers = nn.Sequential(*layers)
-        self.linear = nn.Linear((2 ** (len(num_blocks) - 1)) * feature_maps, num_classes, bias = not few_shot)
+        self.linear = linear((2 ** (len(num_blocks) - 1)) * feature_maps, num_classes)
         if rotations:
-            self.linear_rot = nn.Linear((2 ** (len(num_blocks) - 1)) * feature_maps, 4)
-        self.rotations = rotations        
+            self.linear_rot = linear((2 ** (len(num_blocks) - 1)) * feature_maps, 4)
+        self.rotations = rotations
         self.depth = len(num_blocks)
 
     def _make_layer(self, block, planes, num_blocks, stride):

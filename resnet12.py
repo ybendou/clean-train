@@ -1,3 +1,4 @@
+from utils import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -34,10 +35,10 @@ class ResNet12(nn.Module):
         layers.append(BasicBlockRN12(int(2.5 * feature_maps), 5 * feature_maps))
         layers.append(BasicBlockRN12(5 * feature_maps, 10 * feature_maps))        
         self.layers = nn.Sequential(*layers)
-        self.linear = nn.Linear(10 * feature_maps, num_classes, bias = not few_shot)
+        self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
         if self.rotations:
-            self.linear_rot = nn.Linear(10 * feature_maps, 4)
+            self.linear_rot = linear(10 * feature_maps, 4)
 
     def forward(self, x):
         out = x

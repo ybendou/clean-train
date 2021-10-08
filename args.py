@@ -60,6 +60,11 @@ parser.add_argument("--save-model", type=str, default="", help="save model to fi
 parser.add_argument("--test-features", type=str, default="", help="test features and exit")
 parser.add_argument("--load-model", type=str, default="", help="load model from file")
 
+### few-shot parameters
+parser.add_argument("--n-runs", type=int, default=10000, help="Number of few-shot runs")
+parser.add_argument("--n-ways", type=int, default=5, help="Number of few-shot ways")
+parser.add_argument("--n-queries", type=int, default=15, help="Number of few-shot queries")
+parser.add_argument("--ncm-loss", action="store_true", help="Use ncm output instead of linear")
 
 args = parser.parse_args()
 

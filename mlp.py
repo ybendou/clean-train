@@ -1,3 +1,4 @@
+from utils import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,10 +14,10 @@ class MLP(nn.Module):
             last_size = hidden_neurons
             self.layers.append(nn.ReLU())
         self.module_layers = nn.ModuleList(self.layers)
-        self.last_layer = nn.Linear(last_size, num_classes, bias = not few_shot)
+        self.last_layer = linear(last_size, num_classes)
         self.rotations = rotations
         if self.rotations:
-            self.linear_rot = nn.Linear(last_size, 4)
+            self.linear_rot = linear(last_size, 4)
 
     def forward(self, x):
         features = x.reshape(x.shape[0], -1)

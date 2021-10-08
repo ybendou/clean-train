@@ -1,3 +1,4 @@
+from utils import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -41,18 +42,6 @@ class NetworkBlock(nn.Module):
     def forward(self, x):
         return self.layer(x)
 
-class distLinear(nn.Module):
-    def __init__(self, indim, outdim):
-        super(distLinear, self).__init__()
-        self.L = nn.Linear( indim, outdim, bias = False)
-        WeightNorm.apply(self.L, 'weight', dim=0)
-
-    def forward(self, x):
-        x_norm = torch.norm(x, p=2, dim =1).unsqueeze(1).expand_as(x)
-        x_normalized = x.div(x_norm+ 0.00001)
-        cos_dist = self.L(x_normalized)
-        return 2 * cos_dist
-
 class WideResNet(nn.Module):
     def __init__(self, feature_maps, input_shape, few_shot, rotations, depth = 28, widen_factor = 10, num_classes = 64, drop_rate = 0.5):
         super(WideResNet, self).__init__()
@@ -64,10 +53,10 @@ class WideResNet(nn.Module):
         self.blocks.append(NetworkBlock(n, nChannels[1], nChannels[2], BasicBlockWRN, 2, drop_rate))
         self.blocks.append(NetworkBlock(n, nChannels[2], nChannels[3], BasicBlockWRN, 2, drop_rate))
         self.bn = nn.BatchNorm2d(nChannels[3])
-        self.linear = nn.Linear(nChannels[3], int(num_classes), bias = not few_shot)
+        self.linear = linear(nChannels[3], int(num_classes))
         self.rotations = rotations
         if self.rotations:
-            self.linear_rot = nn.Linear(nChannels[3], 4)
+            self.linear_rot = linear(nChannels[3], 4)
 
     def forward(self, x):
         out = x
