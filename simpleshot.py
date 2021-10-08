@@ -70,8 +70,6 @@ def get_features(model, loader):
         with torch.no_grad():
             data, target = data.to(args.device), target.to(args.device)
             _, features = model(data)
-            if args.rotations:
-                features, _ = features
             all_features.append(features)
             offset = min(min(target), offset)
             max_offset = max(max(target), max_offset)
