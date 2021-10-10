@@ -20,7 +20,6 @@ from wideresnet import *
 from resnet12 import *
 from s2m2 import *
 from mlp import *
-from resnet12hu import *
 print("done")
 
 ### global variables that are used by the train function
@@ -96,7 +95,7 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
         # print advances if at least 100ms have passed since last print
         if (batch_idx + 1 == len(train_loader)) or (time.time() - last_update > 0.1) and not args.quiet:
             if batch_idx + 1 < len(train_loader):
-                print("\r{:4d} {:4d}/{:4d} loss: {:.5f} time: {:s} ".format(epoch, 1 + batch_idx, len(train_loader), losses / total, format_time(time.time() - start_time)), end = "")
+                print("\r{:4d} {:4d} / {:4d} loss: {:.5f} time: {:s} ".format(epoch, 1 + batch_idx, len(train_loader), losses / total, format_time(time.time() - start_time)), end = "")
             else:
                 print("\r{:4d} loss: {:.5f} ".format(epoch, losses / total), end = '')
             last_update = time.time()
@@ -140,23 +139,21 @@ def train_complete(model, loaders, mixup = False):
     
     train_loader, val_loader, test_loader = loaders
 
-    lr = args.lr
-    
+    if args.lr < 0:
+        optimizer = torch.optim.Adam(model.parameters(), lr = -1 * args.lr)
+    else:
+        optimizer = torch.optim.SGD(model.parameters(), lr = args.lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
+
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = eval(args.milestones), gamma = args.gamma)
+        
     if few_shot:
         few_shot_meta_data["best_val_acc_1"] = 0
         few_shot_meta_data["best_val_acc_5"] = 0
 
     for epoch in range(args.epochs + args.manifold_mixup):
 
-        if epoch in eval(args.milestones):
-            lr = lr * args.gamma
-            
-        if lr < 0:
-            optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr)
-        else:
-            optimizer = torch.optim.SGD(model.parameters(), lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
-
         train_stats = train(model, train_loader, optimizer, (epoch + 1), mixup = mixup, mm = epoch >= args.epochs)
+        scheduler.step()
         
         if args.save_model != "" and not few_shot:
             torch.save(model, args.save_model)
@@ -236,8 +233,6 @@ def create_model():
         return MLP(args.feature_maps, int(args.model[3:]), input_shape, num_classes, args.rotations, few_shot).to(args.device)
     if args.model.lower() == "s2m2r":
         return S2M2R(args.feature_maps, input_shape, args.rotations, num_classes = num_classes).to(args.device)
-    if args.model.lower() == "resnet12hu":
-        return resnet12hu().to(args.device)
     
 if args.load_model != "":
     model = torch.load(args.load_model).to(args.device)
@@ -250,6 +245,12 @@ if args.test_features != "":
     print("1-shot: {:.2f}%, 5-shot: {:.2f}%".format(perf1, perf5))
     sys.exit()
 
+random.seed(args.seed)
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 ### here a run is a complete training of a model from scratch
 ### can be long if run is large!!!
 for i in range(args.runs):

@@ -3,6 +3,7 @@ from args import args
 import numpy as np
 import torch
 import json
+import os
 
 class CPUDataset():
     def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False):
@@ -19,7 +20,7 @@ class CPUDataset():
         self.use_hd = use_hd
     def __getitem__(self, idx):
         if self.use_hd:
-            elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB'))).to(args.dataset_device)
+            elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB')))
         else:
             elt = self.data[idx]
         return self.transforms(elt), self.targets[idx]
@@ -54,7 +55,7 @@ class Dataset():
 def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False):
     if args.dataset_device == "cpu" or forcecpu:
         dataset = CPUDataset(data, target, transforms, use_hd = use_hd)
-        return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = 32)
+        return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = min(8, os.cpu_count()))
     else:
         return Dataset(data, target, transforms, shuffle = shuffle)
 

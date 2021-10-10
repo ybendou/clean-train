@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 
 parser = argparse.ArgumentParser(description="""Optimized code for training usual datasets/model
 
@@ -23,7 +24,7 @@ python main.py --dataset cubfs --mixup --rotations
 To train CIFARFS (few-shot) with 84.87% accuracy (70.43% in 1-shot) (1h):
 python main.py --dataset cifarfs --mixup --rotations --skip-epochs 300
 To train CIFARFS (few-shot) with 86.83% accuracy (70.27% in 1-shot) (3h):
-python main.py --dataset cifarfs --mixup --model wideresnet --feature-maps 16 --skip-epochs 300
+python main.py --dataset cifarfs --mixup --model wideresnet --feature-maps 16 --skip-epochs 300 --rotations
 To train MiniImageNet (few-shot) with 80.43% accuracy (64.11% in 1-shot) (2h):
 python main.py --dataset miniimagenet --model resnet12 --gamma 0.2 --milestones '[30,60,90]' --epochs 120 --batch-size 128 --preprocessing 'EME'
 To train MiniImageNet (few-shot) with 83.18% accuracy (66.78% in 1-shot) (40h):
@@ -59,6 +60,7 @@ parser.add_argument("--save-features", type=str, default="", help="save features
 parser.add_argument("--save-model", type=str, default="", help="save model to file")
 parser.add_argument("--test-features", type=str, default="", help="test features and exit")
 parser.add_argument("--load-model", type=str, default="", help="load model from file")
+parser.add_argument("--seed", type=int, default=-1, help="set random seed manually, and also use deterministic approach")
 
 ### few-shot parameters
 parser.add_argument("--n-runs", type=int, default=10000, help="Number of few-shot runs")
@@ -79,3 +81,6 @@ if args.device[:5] == "cuda:" and len(args.device) > 5:
     args.device = args.device[:6]
 else:
     args.devices = [args.device]
+
+if args.seed == -1:
+    args.seed = random.randint(0, 1000000000)
