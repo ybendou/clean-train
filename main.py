@@ -240,8 +240,8 @@ if args.load_model != "":
 if args.test_features != "":
     test_features = torch.load(args.test_features)
     print("Testing features of shape", test_features.shape)
-    perf1 = 100 * ncm(test_features, few_shot_meta_data["novel_run_classes"], few_shot_meta_data["novel_run_indices"], 1)
-    perf5 = 100 * ncm(test_features, few_shot_meta_data["novel_run_classes"], few_shot_meta_data["novel_run_indices"], 5)
+    perf1 = 100 * ncm(test_features, few_shot_meta_data["novel_run_classes_1"], few_shot_meta_data["novel_run_indices_1"], 1)
+    perf5 = 100 * ncm(test_features, few_shot_meta_data["novel_run_classes_5"], few_shot_meta_data["novel_run_indices_5"], 5)
     print("1-shot: {:.2f}%, 5-shot: {:.2f}%".format(perf1, perf5))
     sys.exit()
 
