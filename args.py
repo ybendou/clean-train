@@ -43,6 +43,8 @@ parser.add_argument("--rotations", action="store_true", help="use of rotations s
 parser.add_argument("--model", type=str, default="ResNet18", help="model to train")
 parser.add_argument("--preprocessing", type=str, default="RPEME", help="preprocessing sequence for few shot, can contain R:relu P:sqrt E:sphering and M:centering")
 parser.add_argument("--manifold-mixup", type=int, default="0", help="deploy manifold mixup as fine-tuning as in S2M2R for the given number of epochs, to be used only with S2M2R model")
+parser.add_argument("--temperature", type=float, default=1., help="multiplication factor before softmax")
+
 
 ### pytorch options
 parser.add_argument("--device", type=str, default="cuda:0", help="device(s) to use, for multiple GPUs try cuda:ijk, will not work with 10+ GPUs")
@@ -64,10 +66,11 @@ parser.add_argument("--load-model", type=str, default="", help="load model from 
 parser.add_argument("--seed", type=int, default=-1, help="set random seed manually, and also use deterministic approach")
 
 ### few-shot parameters
-parser.add_argument("--n-runs", type=int, default=10000, help="Number of few-shot runs")
-parser.add_argument("--n-ways", type=int, default=5, help="Number of few-shot ways")
-parser.add_argument("--n-queries", type=int, default=15, help="Number of few-shot queries")
-parser.add_argument("--ncm-loss", action="store_true", help="Use ncm output instead of linear")
+parser.add_argument("--n-runs", type=int, default=10000, help="number of few-shot runs")
+parser.add_argument("--n-ways", type=int, default=5, help="number of few-shot ways")
+parser.add_argument("--n-queries", type=int, default=15, help="number of few-shot queries")
+parser.add_argument("--ncm-loss", action="store_true", help="use ncm output instead of linear")
+parser.add_argument("--episodic", action="store_true", help="use episodic training")
 
 args = parser.parse_args()
 

@@ -30,6 +30,7 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
     
     losses = 0  # to keep track of the training loss
     total = 0
+    t = args.temperature
     
     for batch_idx, (data, target) in enumerate(train_loader):
             
@@ -50,7 +51,7 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             output, _ = model(data, index_mixup = index_mixup, lam = lam)
             if args.rotations:
                 output, _ = output
-            loss_mm = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
+            loss_mm = lam * criterion(t * output, target) + (1 - lam) * criterion(t * output, target[index_mixup])
             loss_mm.backward()
 
         if args.rotations: # generate self-supervised rotations for improved universality of feature vectors
@@ -71,16 +72,16 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             output, _ = model(data_mixed)
             if args.rotations:
                 output, output_rot = output
-                loss = ((lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])) + (lam * criterion(output_rot, target_rot) + (1 - lam) * criterion(output_rot, target_rot[index_mixup]))) / 2
+                loss = ((lam * criterion(t * output, target) + (1 - lam) * criterion(t * output, target[index_mixup])) + (lam * criterion(t * output_rot, target_rot) + (1 - lam) * criterion(t * output_rot, target_rot[index_mixup]))) / 2
             else:
-                loss = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
+                loss = lam * criterion(t * output, target) + (1 - lam) * criterion(t * output, target[index_mixup])
         else:
             output, _ = model(data)
             if args.rotations:
                 output, output_rot = output
-                loss = 0.5 * criterion(output, target) + 0.5 * criterion(output_rot, target_rot)
+                loss = 0.5 * criterion(t * output, target) + 0.5 * criterion(t * output_rot, target_rot)
             else:
-                loss = criterion(output, target)
+                loss = criterion(t * output, target)
 
         # backprop loss
         loss.backward()

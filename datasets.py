@@ -29,9 +29,9 @@ class CPUDataset():
 
 class Dataset():
     def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, shuffle = True, device = args.dataset_device):
-        self.data = data.to(device)
         if torch.is_tensor(data):
             self.length = data.shape[0]
+            self.data = data.to(device)
         else:
             self.length = len(self.data)
         self.targets = targets.to(device)
@@ -49,6 +49,38 @@ class Dataset():
                 yield self.transforms(self.data[self.permutation[i * self.batch_size : (i+1) * self.batch_size]]), self.targets[self.permutation[i * self.batch_size : (i+1) * self.batch_size]]
             else:
                 yield torch.stack([self.transforms(self.data[x]) for x in self.permutation[i * self.batch_size : (i+1) * self.batch_size]]), self.targets[self.permutation[i * self.batch_size : (i+1) * self.batch_size]]
+    def __len__(self):
+        return self.n_batches
+
+class EpisodicDataset():
+    def __init__(self, data, num_classes, transforms = [], episod_size = args.batch_size, device = args.dataset_device, use_hd = False):
+        if torch.is_tensor(data):
+            self.length = data.shape[0]
+            self.data = data.to(device)
+        else:
+            self.data = data
+            self.length = len(self.data)
+        self.episod_size = episod_size
+        self.transforms = transforms
+        self.num_classes = num_classes
+        self.n_batches = self.length // self.episod_size
+        self.use_hd = use_hd
+        self.device = device
+    def __iter__(self):
+        for i in range(self.n_batches):
+            classes = np.random.permutation(np.arange(self.num_classes))[:args.n_ways]
+            indices = []
+            for c in range(args.n_ways):
+                class_indices = np.random.permutation(np.arange(self.length // self.num_classes))[:5 + args.n_queries]
+                indices += list(class_indices + classes[c] * (self.length // self.num_classes))
+            targets = torch.repeat_interleave(torch.tensor(classes), 5 + args.n_queries).to(self.device)
+            if torch.is_tensor(self.data):
+                yield self.transforms(self.data[indices]), targets
+            else:
+                if self.use_hd:
+                    yield torch.stack([self.transforms(transforms.ToTensor()(np.array(Image.open(self.data[x]).convert('RGB')))) for x in indices]), targets
+                else:
+                    yield torch.stack([self.transforms(self.data[x]) for x in indices]), targets
     def __len__(self):
         return self.n_batches
 
@@ -181,9 +213,11 @@ def cifarfs(data_augmentation = True):
     val_targets = remaining_labels[torch.where(remaining_labels < 80)[0]]
     test_data = all_data[torch.where(all_labels >= 80)[0]]
     test_targets = all_labels[torch.where(all_labels >= 80)[0]]
-    
+
+    train_data = torch.cat([train_data[torch.where(train_targets == i)] for i in range(64)], dim = 0)
     val_data = torch.cat([val_data[torch.where(val_targets == i)] for i in range(64, 80)], dim = 0)
     test_data = torch.cat([test_data[torch.where(test_targets == i)] for i in range(80, 100)], dim = 0)
+    train_targets = torch.repeat_interleave(torch.arange(64), 600)
     val_targets = torch.repeat_interleave(torch.arange(64, 80), 600)
     test_targets = torch.repeat_interleave(torch.arange(80, 100), 600)
     
@@ -192,7 +226,10 @@ def cifarfs(data_augmentation = True):
         list_trans_train = torch.nn.Sequential(transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(), norm)
     else:
         list_trans_train = norm
-    train_loader = iterator(train_data, train_targets, transforms = list_trans_train)
+    if args.episodic:
+        train_loader = EpisodicDataset(train_data, 64, transforms = list_trans_train)
+    else:
+        train_loader = iterator(train_data, train_targets, transforms = list_trans_train)
     val_loader = iterator(val_data, val_targets, transforms = norm, shuffle = False)
     test_loader = iterator(test_data, test_targets, transforms = norm, shuffle = False)
     return (train_loader, val_loader, test_loader), [3, 32, 32], (64, 16, 20, 600), True, False
@@ -230,7 +267,10 @@ def miniImageNet(use_hd = True):
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
     all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
-    train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
+    if args.episodic:
+        train_loader = EpisodicDataset(datasets["train"][0], 64, transforms = train_transforms, device = "cpu", use_hd = True)
+    else:
+        train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
     val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     return (train_loader, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
@@ -244,6 +284,19 @@ def CUBfs():
     for i in range(len(train)):
         if train[i].shape[0] != 3:
             train[i] = train[i].repeat(3,1,1)
+    if args.episodic:
+        new_train = []
+        num_elements_train = []
+        for i in range(100):
+            indices = torch.where(train_targets == i)[0]
+            num_elements_train.append(len(indices))
+            for x in indices:
+                new_train.append(train[x])
+            size = len(indices)
+            if size < 60:
+                for i in range(60 - size):
+                    new_train.append(train[indices[i]])
+        train, train_targets = [new_train, torch.arange(100).repeat_interleave(60)]
     with open(args.dataset_path + "CUB/val.pkl", "rb") as f:
         train_file = pickle.load(f)
     validation, validation_targets = [(x.float() / 256) for x in train_file['data']], torch.LongTensor(train_file['labels'])
@@ -282,7 +335,10 @@ def CUBfs():
     novel, novel_targets = [new_novel, torch.arange(150, 200).repeat_interleave(60)]
     train_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), transforms.RandomHorizontalFlip(), transforms.Normalize((0.4770, 0.4921, 0.4186) ,(0.1805, 0.1792, 0.1898)))
     all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), transforms.Normalize((0.4770, 0.4921, 0.4186), (0.1805, 0.1792, 0.1898)))
-    train_loader = iterator(train, train_targets, transforms = train_transforms, forcecpu = True)
+    if args.episodic:
+        train_loader = EpisodicDataset(train, 100, transforms = train_transforms, device = "cpu", use_hd = True)
+    else:
+        train_loader = iterator(train, train_targets, transforms = train_transforms, forcecpu = True)
     val_loader = iterator(validation, validation_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     test_loader = iterator(novel, novel_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     return (train_loader, val_loader, test_loader), [3, 84, 84], (100, 50, 50, (num_elements_val, num_elements_novel)), True, False
@@ -299,7 +355,10 @@ def omniglotfs():
     novel_targets = torch.arange(novel.shape[0]).unsqueeze(1).repeat(1, novel.shape[1]).reshape(-1)
     train_transforms = torch.nn.Sequential(transforms.RandomCrop(100, padding = 4), transforms.Normalize((0.0782) ,(0.2685)))
     all_transforms = torch.nn.Sequential(transforms.CenterCrop(100), transforms.Normalize((0.0782), (0.2685)))
-    train_loader = iterator(base_data, base_targets, transforms = train_transforms)
+    if args.episodic:
+        train_loader = EpisodicDataset(base_data, base.shape[0], transforms = train_transforms)
+    else:
+        train_loader = iterator(base_data, base_targets, transforms = train_transforms)
     val_loader = iterator(val_data, val_targets, transforms = all_transforms, shuffle = False)
     test_loader = iterator(novel_data, novel_targets, transforms = all_transforms, shuffle = False)
     return (train_loader, val_loader, test_loader), [1, 100, 100], (base.shape[0], val.shape[0], novel.shape[0], novel.shape[1]), True, False
@@ -317,7 +376,10 @@ def miniImageNet84():
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
     all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
-    train_loader = iterator(train, train_targets, transforms = train_transforms, forcecpu = True)
+    if args.episodic:
+        train_loader = EpisodicDataset(train, 64, transforms = train_transforms, device = "cpu")
+    else:
+        train_loader = iterator(train, train_targets, transforms = train_transforms, forcecpu = True)
     val_loader = iterator(validation, validation_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     test_loader = iterator(test, test_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     return (train_loader, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
