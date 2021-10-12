@@ -38,7 +38,7 @@ class ResNet(nn.Module):
         self.layers = nn.Sequential(*layers)
         self.linear = linear((2 ** (len(num_blocks) - 1)) * feature_maps, num_classes)
         if rotations:
-            self.linear_rot = linear((2 ** (len(num_blocks) - 1)) * feature_maps, 4)
+            self.linear_rot = nn.Linear((2 ** (len(num_blocks) - 1)) * feature_maps, 4)
         self.rotations = rotations
         self.depth = len(num_blocks)
 
@@ -51,9 +51,19 @@ class ResNet(nn.Module):
             self.in_planes = planes
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, index_mixup = None, lam = -1):
+        if lam != -1:
+            mixup_layer = random.randint(0, len(self.layers))
+        else:
+            mixup_layer = -1
+        out = x
+        if mixup_layer == 0:
+            out = lam * out + (1 - lam) * out[index_mixup]
         out = F.relu(self.bn1(self.conv1(x)))
-        out = self.layers(out)
+        for i in range(len(self.layers)):
+            out = self.layers[i](out)
+            if mixup_layer == i + 1:
+                out = lam * out + (1 - lam) * out[index_mixup]
         out = F.avg_pool2d(out, out.shape[2])
         features = out.view(out.size(0), -1)
         out = self.linear(features)

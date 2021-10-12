@@ -38,11 +38,20 @@ class ResNet12(nn.Module):
         self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
         if self.rotations:
-            self.linear_rot = linear(10 * feature_maps, 4)
+            self.linear_rot = nn.Linear(10 * feature_maps, 4)
 
-    def forward(self, x):
+    def forward(self, x, index_mixup = None, lam = -1):
+        if lam != -1:
+            mixup_layer = random.randint(0, 3)
+        else:
+            mixup_layer = -1
         out = x
-        out = self.layers(out)
+        if mixup_layer == 0:
+            out = lam * out + (1 - lam) * out[index_mixup]
+        for i in range(len(self.layers)):
+            out = self.layers[i](out)
+            if mixup_layer == i + 1:
+                out = lam * out + (1 - lam) * out[index_mixup]
         out = F.avg_pool2d(out, out.shape[2])
         features = out.view(out.size(0), -1)
         out = self.linear(features)

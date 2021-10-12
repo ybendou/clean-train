@@ -85,7 +85,11 @@ class S2M2R(nn.Module):
         if self.rotations:
             self.rotationLinear = nn.Linear(nChannels[3], 4)
 
-    def forward(self, x, mixup_layer = -1, index_mixup = None, lam = None):
+    def forward(self, x, index_mixup = None, lam = -1):
+        if lam != -1:
+            mixup_layer = random.randint(0, 3)
+        else:
+            mixup_layer = -1
         out = x
         if mixup_layer == 0:
             out = lam * out + (1 - lam) * out[index_mixup]

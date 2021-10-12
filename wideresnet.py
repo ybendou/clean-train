@@ -56,13 +56,21 @@ class WideResNet(nn.Module):
         self.linear = linear(nChannels[3], int(num_classes))
         self.rotations = rotations
         if self.rotations:
-            self.linear_rot = linear(nChannels[3], 4)
+            self.linear_rot = nn.Linear(nChannels[3], 4)
 
-    def forward(self, x):
+    def forward(self, x, index_mixup = None, lam = -1):
+        if lam != -1:
+            mixup_layer = random.randint(0, 3)
+        else:
+            mixup_layer = -1
         out = x
+        if mixup_layer == 0:
+            out = lam * out + (1 - lam) * out[index_mixup]
         out = self.conv1(out)
         for i in range(len(self.blocks)):
             out = self.blocks[i](out)
+            if mixup_layer == i + 1:
+                out = lam * out + (1 - lam) * out[index_mixup]
         out = torch.relu(self.bn(out))
         out = F.avg_pool2d(out, out.size()[2:])
         out = out.view(out.size(0), -1)

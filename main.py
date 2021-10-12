@@ -47,8 +47,7 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             index_mixup = torch.cat(new_chunks, dim = 0)
             #index_mixup = torch.randperm(data.shape[0])
             lam = np.random.beta(2, 2)
-            depth = random.randint(0, 3)
-            output, _ = model(data, mixup_layer = depth, index_mixup = index_mixup, lam = lam)
+            output, _ = model(data, index_mixup = index_mixup, lam = lam)
             if args.rotations:
                 output, _ = output
             loss_mm = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
@@ -238,7 +237,7 @@ if args.load_model != "":
     model = torch.load(args.load_model).to(args.device)
 
 if args.test_features != "":
-    test_features = torch.load(args.test_features)
+    test_features = torch.load(args.test_features).to(args.dataset_device)
     print("Testing features of shape", test_features.shape)
     perf1 = 100 * ncm(test_features, few_shot_meta_data["novel_run_classes_1"], few_shot_meta_data["novel_run_indices_1"], 1)
     perf5 = 100 * ncm(test_features, few_shot_meta_data["novel_run_classes_5"], few_shot_meta_data["novel_run_indices_5"], 5)
@@ -249,8 +248,9 @@ random.seed(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 torch.cuda.manual_seed_all(args.seed)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
+if args.deterministic:
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 ### here a run is a complete training of a model from scratch
 ### can be long if run is large!!!
 for i in range(args.runs):

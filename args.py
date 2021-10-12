@@ -48,6 +48,7 @@ parser.add_argument("--manifold-mixup", type=int, default="0", help="deploy mani
 parser.add_argument("--device", type=str, default="cuda:0", help="device(s) to use, for multiple GPUs try cuda:ijk, will not work with 10+ GPUs")
 parser.add_argument("--dataset-path", type=str, default=os.environ.get("DATASETS"), help="dataset path")
 parser.add_argument("--dataset-device", type=str, default="", help="use a different device for storing the datasets (use 'cpu' if you are lacking VRAM)")
+parser.add_argument("--deterministic", action="store_true", help="use desterministic randomness for reproducibility")
 
 ### run options
 parser.add_argument("--skip-epochs", type=int, default="0", help="number of epochs to skip before evaluating few-shot performance")

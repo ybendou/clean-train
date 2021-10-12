@@ -17,7 +17,7 @@ class MLP(nn.Module):
         self.last_layer = linear(last_size, num_classes)
         self.rotations = rotations
         if self.rotations:
-            self.linear_rot = linear(last_size, 4)
+            self.linear_rot = nn.Linear(last_size, 4)
 
     def forward(self, x):
         features = x.reshape(x.shape[0], -1)
