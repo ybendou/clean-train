@@ -221,6 +221,8 @@ if args.output != "":
 
 ### function to create model
 def create_model():
+    if args.load_model != "":
+        return torch.load(args.load_model).to(args.device)
     if args.model.lower() == "resnet18":
         return ResNet(BasicBlock, [2, 2, 2, 2], args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)
     if args.model.lower() == "resnet20":
@@ -233,9 +235,6 @@ def create_model():
         return MLP(args.feature_maps, int(args.model[3:]), input_shape, num_classes, args.rotations, few_shot).to(args.device)
     if args.model.lower() == "s2m2r":
         return S2M2R(args.feature_maps, input_shape, args.rotations, num_classes = num_classes).to(args.device)
-    
-if args.load_model != "":
-    model = torch.load(args.load_model).to(args.device)
 
 if args.test_features != "":
     test_features = torch.load(args.test_features).to(args.dataset_device)
