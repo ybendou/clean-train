@@ -71,9 +71,9 @@ class EpisodicDataset():
             classes = np.random.permutation(np.arange(self.num_classes))[:args.n_ways]
             indices = []
             for c in range(args.n_ways):
-                class_indices = np.random.permutation(np.arange(self.length // self.num_classes))[:5 + args.n_queries]
+                class_indices = np.random.permutation(np.arange(self.length // self.num_classes))[:self.episod_size // 5]
                 indices += list(class_indices + classes[c] * (self.length // self.num_classes))
-            targets = torch.repeat_interleave(torch.tensor(classes), 5 + args.n_queries).to(self.device)
+            targets = torch.repeat_interleave(torch.tensor(classes), self.episod_size // 5).to(self.device)
             if torch.is_tensor(self.data):
                 yield self.transforms(self.data[indices]), targets
             else:
