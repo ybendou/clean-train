@@ -85,7 +85,10 @@ def update_few_shot_meta_data(model, test_loader, val_loader, few_shot_meta_data
     val_acc_5, test_acc_5 = eval_few_shot(val_features, test_features, few_shot_meta_data["val_run_classes_5"], few_shot_meta_data["val_run_indices_5"], few_shot_meta_data["novel_run_classes_5"], few_shot_meta_data["novel_run_indices_5"], n_shots = 5)
     if val_acc_5 > few_shot_meta_data["best_val_acc_5"]:
         if args.save_model != "":
-            torch.save(model, args.save_model + "5")
+            if len(args.devices) == 1:
+                torch.save(model.state_dict(), args.save_model + "5")
+            else:
+                torch.save(model.module.state_dict(), args.save_model + "5")
         if args.save_features != "":
             torch.save(test_features, args.save_features + "5")
         few_shot_meta_data["best_val_acc_5"] = val_acc_5
@@ -93,7 +96,10 @@ def update_few_shot_meta_data(model, test_loader, val_loader, few_shot_meta_data
     val_acc_1, test_acc_1 = eval_few_shot(val_features, test_features, few_shot_meta_data["val_run_classes_1"], few_shot_meta_data["val_run_indices_1"], few_shot_meta_data["novel_run_classes_1"], few_shot_meta_data["novel_run_indices_1"], n_shots = 1)
     if val_acc_1 > few_shot_meta_data["best_val_acc_1"]:
         if args.save_model != "":
-            torch.save(model, args.save_model + "1")
+            if len(args.devices) == 1:
+                torch.save(model.state_dict(), args.save_model + "1")
+            else:
+                torch.save(model.module.state_dict(), args.save_model + "1")
         if args.save_features != "":
             torch.save(test_features, args.save_features + "1")
         few_shot_meta_data["best_val_acc_1"] = val_acc_1

@@ -16,7 +16,6 @@ class CPUDataset():
         assert(self.length == targets.shape[0])
         self.batch_size = batch_size
         self.transforms = transforms
-        self.n_batches = self.length // self.batch_size + (0 if self.length % self.batch_size == 0 else 1)
         self.use_hd = use_hd
     def __getitem__(self, idx):
         if self.use_hd:
@@ -53,17 +52,17 @@ class Dataset():
         return self.n_batches
 
 class EpisodicDataset():
-    def __init__(self, data, num_classes, transforms = [], episod_size = args.batch_size, device = args.dataset_device, use_hd = False):
+    def __init__(self, data, num_classes, transforms = [], episode_size = args.batch_size, device = args.dataset_device, use_hd = False):
         if torch.is_tensor(data):
             self.length = data.shape[0]
             self.data = data.to(device)
         else:
             self.data = data
             self.length = len(self.data)
-        self.episod_size = episod_size
+        self.episode_size = episode_size
         self.transforms = transforms
         self.num_classes = num_classes
-        self.n_batches = self.length // self.episod_size
+        self.n_batches = self.length // self.episode_size
         self.use_hd = use_hd
         self.device = device
     def __iter__(self):
@@ -71,16 +70,16 @@ class EpisodicDataset():
             classes = np.random.permutation(np.arange(self.num_classes))[:args.n_ways]
             indices = []
             for c in range(args.n_ways):
-                class_indices = np.random.permutation(np.arange(self.length // self.num_classes))[:self.episod_size // 5]
+                class_indices = np.random.permutation(np.arange(self.length // self.num_classes))[:self.episode_size // args.n_ways]
                 indices += list(class_indices + classes[c] * (self.length // self.num_classes))
-            targets = torch.repeat_interleave(torch.tensor(classes), self.episod_size // 5).to(self.device)
+            targets = torch.repeat_interleave(torch.tensor(classes), self.episode_size // args.n_ways).to(self.device)
             if torch.is_tensor(self.data):
                 yield self.transforms(self.data[indices]), targets
             else:
                 if self.use_hd:
-                    yield torch.stack([self.transforms(transforms.ToTensor()(np.array(Image.open(self.data[x]).convert('RGB')))) for x in indices]), targets
+                    yield torch.stack([self.transforms(transforms.ToTensor()(np.array(Image.open(self.data[x]).convert('RGB'))).to(self.device)) for x in indices]), targets
                 else:
-                    yield torch.stack([self.transforms(self.data[x]) for x in indices]), targets
+                    yield torch.stack([self.transforms(self.data[x].to(self.device)) for x in indices]), targets
     def __len__(self):
         return self.n_batches
 

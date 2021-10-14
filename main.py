@@ -30,7 +30,6 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
     
     losses = 0  # to keep track of the training loss
     total = 0
-    t = args.temperature
     
     for batch_idx, (data, target) in enumerate(train_loader):
             
@@ -48,10 +47,10 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             index_mixup = torch.cat(new_chunks, dim = 0)
             #index_mixup = torch.randperm(data.shape[0])
             lam = np.random.beta(2, 2)
-            output, _ = model(data, index_mixup = index_mixup, lam = lam)
+            output, features = model(data, index_mixup = index_mixup, lam = lam)
             if args.rotations:
                 output, _ = output
-            loss_mm = lam * criterion(t * output, target) + (1 - lam) * criterion(t * output, target[index_mixup])
+            loss_mm = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
             loss_mm.backward()
 
         if args.rotations: # generate self-supervised rotations for improved universality of feature vectors
@@ -65,23 +64,26 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             data[3*bs:] = data[3*bs:].transpose(3,2).flip(2)
             target_rot[3*bs:] = 3
 
-        if mixup: # classical mixup
+        if mixup and not args.episodic: # classical mixup
             index_mixup = torch.randperm(data.shape[0])
             lam = random.random()
             data_mixed = lam * data + (1 - lam) * data[index_mixup]
-            output, _ = model(data_mixed)
+            output, features = model(data_mixed)
             if args.rotations:
                 output, output_rot = output
-                loss = ((lam * criterion(t * output, target) + (1 - lam) * criterion(t * output, target[index_mixup])) + (lam * criterion(t * output_rot, target_rot) + (1 - lam) * criterion(t * output_rot, target_rot[index_mixup]))) / 2
+                loss = ((lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])) + (lam * criterion(output_rot, target_rot) + (1 - lam) * criterion(output_rot, target_rot[index_mixup]))) / 2
             else:
-                loss = lam * criterion(t * output, target) + (1 - lam) * criterion(t * output, target[index_mixup])
+                loss = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
         else:
-            output, _ = model(data)
-            if args.rotations:
+            output, features = model(data)
+            if args.rotations and not args.episodic:
                 output, output_rot = output
-                loss = 0.5 * criterion(t * output, target) + 0.5 * criterion(t * output_rot, target_rot)
+                loss = 0.5 * criterion(output, target) + 0.5 * criterion(output_rot, target_rot)
             else:
-                loss = criterion(t * output, target)
+                if args.episodic:
+                    loss = criterion_episodic(features)
+                else:
+                    loss = criterion(output, target)
 
         # backprop loss
         loss.backward()
@@ -156,7 +158,10 @@ def train_complete(model, loaders, mixup = False):
         scheduler.step()
         
         if args.save_model != "" and not few_shot:
-            torch.save(model, args.save_model)
+            if len(args.devices) == 1:
+                torch.save(model.state_dict(), args.save_model)
+            else:
+                torch.save(model.module.state_dict(), args.save_model)
         
         if (epoch + 1) > args.skip_epochs:
             if few_shot:
@@ -184,10 +189,15 @@ if few_shot:
     else:
         elements_val, elements_novel = [elements_per_class] * val_classes, [elements_per_class] * novel_classes
     print("Dataset contains",num_classes,"base classes,",val_classes,"val classes and",novel_classes,"novel classes.")
+    print("Generating runs... ", end='')
     val_run_classes_1, val_run_indices_1 = define_runs(n_ways, 1, n_queries, val_classes, elements_val)
+    print("val-1, ", end='')
     novel_run_classes_1, novel_run_indices_1 = define_runs(n_ways, 1, n_queries, novel_classes, elements_novel)
+    print("nov-1, ", end='')
     val_run_classes_5, val_run_indices_5 = define_runs(n_ways, 5, n_queries, val_classes, elements_val)
+    print("val-5, ", end='')
     novel_run_classes_5, novel_run_indices_5 = define_runs(n_ways, 5, n_queries, novel_classes, elements_novel)
+    print("nov-5.")
     few_shot_meta_data = {
         "val_run_classes_1" : val_run_classes_1,
         "val_run_indices_1" : val_run_indices_1,
@@ -221,8 +231,6 @@ if args.output != "":
 
 ### function to create model
 def create_model():
-    if args.load_model != "":
-        return torch.load(args.load_model).to(args.device)
     if args.model.lower() == "resnet18":
         return ResNet(BasicBlock, [2, 2, 2, 2], args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)
     if args.model.lower() == "resnet20":
@@ -257,6 +265,9 @@ for i in range(args.runs):
     if not args.quiet:
         print(args)
     model = create_model()
+    if args.load_model != "":
+        model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
+        model.to(args.device)
 
     if len(args.devices) > 1:
         model = torch.nn.DataParallel(model, device_ids = args.devices)
