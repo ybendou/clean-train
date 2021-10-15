@@ -33,7 +33,7 @@ class ncm_output(nn.Module):
 
     def forward(self, x):
         x = x / torch.norm(x + 1e-6, dim = 1, p = 2, keepdim = True)
-        return self.temp * torch.norm(x.reshape(x.shape[0], 1, -1) - self.linear.weight_v.transpose(0,1).reshape(1, -1, x.shape[1]), dim = 2)
+        return torch.norm(x.reshape(x.shape[0], 1, -1) - self.linear.weight_v.transpose(0,1).reshape(1, -1, x.shape[1]), dim = 2).pow(2) / self.temp
 
 def linear(indim, outdim):
     if args.ncm_loss:
@@ -41,10 +41,9 @@ def linear(indim, outdim):
     else:
         return nn.Linear(indim, outdim)
 
-def criterion_episodic(features, n_shots = 1):
+def criterion_episodic(features, targets, n_shots = args.n_shots):
     feat = features.reshape(args.n_ways, -1, features.shape[1])
     means = torch.mean(feat[:,:n_shots], dim = 1)
-    dists = torch.norm(feat[:,n_shots:].unsqueeze(2) - means.unsqueeze(0).unsqueeze(0), dim = 3, p = 2).reshape(-1, args.n_ways)
-    target = torch.arange(args.n_ways).repeat_interleave((features.shape[0] // args.n_ways) - n_shots).to(args.device)
-    return torch.nn.CrossEntropyLoss()(-args.temperature * dists, target)
+    dists = torch.norm(feat[:,n_shots:].unsqueeze(2) - means.unsqueeze(0).unsqueeze(0), dim = 3, p = 2).reshape(-1, args.n_ways).pow(2)
+    return torch.nn.CrossEntropyLoss()(-1 * dists / args.temperature, targets.reshape(args.n_ways,-1)[:,n_shots:].reshape(-1))
     

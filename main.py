@@ -50,7 +50,10 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             output, features = model(data, index_mixup = index_mixup, lam = lam)
             if args.rotations:
                 output, _ = output
-            loss_mm = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
+            if args.episodic:
+                loss_mm = lam * criterion_episodic(features, target) + (1 - lam) * criterion_episodic(features, target[index_mixup])
+            else:
+                loss_mm = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
             loss_mm.backward()
 
         if args.rotations: # generate self-supervised rotations for improved universality of feature vectors
@@ -64,24 +67,33 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             data[3*bs:] = data[3*bs:].transpose(3,2).flip(2)
             target_rot[3*bs:] = 3
 
-        if mixup and not args.episodic: # classical mixup
+        if mixup: # classical mixup
             index_mixup = torch.randperm(data.shape[0])
             lam = random.random()
             data_mixed = lam * data + (1 - lam) * data[index_mixup]
             output, features = model(data_mixed)
             if args.rotations:
                 output, output_rot = output
-                loss = ((lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])) + (lam * criterion(output_rot, target_rot) + (1 - lam) * criterion(output_rot, target_rot[index_mixup]))) / 2
-            else:
-                loss = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
-        else:
-            output, features = model(data)
-            if args.rotations and not args.episodic:
-                output, output_rot = output
-                loss = 0.5 * criterion(output, target) + 0.5 * criterion(output_rot, target_rot)
+                if args.episodic:
+                    loss = ((lam * criterion_episodic(features, target) + (1 - lam) * criterion_episodic(features, target[index_mixup])) + (lam * criterion_episodic(features_rot, target_rot) + (1 - lam) * criterion_episodic(features_rot, target_rot[index_mixup]))) / 2
+                else:
+                    loss = ((lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])) + (lam * criterion(output_rot, target_rot) + (1 - lam) * criterion(output_rot, target_rot[index_mixup]))) / 2
             else:
                 if args.episodic:
-                    loss = criterion_episodic(features)
+                    loss = lam * criterion_episodic(features, target) + (1 - lam) * criterion_episodic(features, target[index_mixup])
+                else:
+                    loss = lam * criterion(output, target) + (1 - lam) * criterion(output, target[index_mixup])
+        else:
+            output, features = model(data)
+            if args.rotations:
+                output, output_rot = output
+                if args.episodic:
+                    loss = 0.5 * criterion_episodic(features, target) + 0.5 * criterion_episodic(features, target_rot)
+                else:
+                    loss = 0.5 * criterion(output, target) + 0.5 * criterion(output_rot, target_rot)
+            else:
+                if args.episodic:
+                    loss = criterion_episodic(features, target)
                 else:
                     loss = criterion(output, target)
 

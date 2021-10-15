@@ -71,6 +71,8 @@ parser.add_argument("--n-ways", type=int, default=5, help="number of few-shot wa
 parser.add_argument("--n-queries", type=int, default=15, help="number of few-shot queries")
 parser.add_argument("--ncm-loss", action="store_true", help="use ncm output instead of linear")
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
+parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
+parser.add_argument("--n-shots", type=int, default=1, help="number of shots used during episodic training")
 
 args = parser.parse_args()
 

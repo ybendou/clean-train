@@ -37,8 +37,7 @@ class ResNet12(nn.Module):
         self.layers = nn.Sequential(*layers)
         self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
-        if self.rotations:
-            self.linear_rot = nn.Linear(10 * feature_maps, 4)
+        self.linear_rot = nn.Linear(10 * feature_maps, 4)
 
     def forward(self, x, index_mixup = None, lam = -1):
         if lam != -1:

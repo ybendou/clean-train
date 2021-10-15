@@ -37,8 +37,7 @@ class ResNet(nn.Module):
             layers.append(self._make_layer(block, (2 ** i) * feature_maps, nb, stride = 1 if i == 0 else 2))
         self.layers = nn.Sequential(*layers)
         self.linear = linear((2 ** (len(num_blocks) - 1)) * feature_maps, num_classes)
-        if rotations:
-            self.linear_rot = nn.Linear((2 ** (len(num_blocks) - 1)) * feature_maps, 4)
+        self.linear_rot = nn.Linear((2 ** (len(num_blocks) - 1)) * feature_maps, 4)
         self.rotations = rotations
         self.depth = len(num_blocks)
 

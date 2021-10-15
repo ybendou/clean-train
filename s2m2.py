@@ -82,8 +82,7 @@ class S2M2R(nn.Module):
         self.bn = nn.BatchNorm2d(nChannels[3])
         self.linear = distLinear(nChannels[3], int(num_classes))
         self.rotations = rotations
-        if self.rotations:
-            self.rotationLinear = nn.Linear(nChannels[3], 4)
+        self.rotationLinear = nn.Linear(nChannels[3], 4)
 
     def forward(self, x, index_mixup = None, lam = -1):
         if lam != -1:
