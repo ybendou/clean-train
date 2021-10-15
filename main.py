@@ -308,16 +308,12 @@ for i in range(args.runs):
     # print stats
     print("Run", i + 1, "/", args.runs)
     if few_shot:
-        mean, low, up, worst, best = stats(run_stats["best_test_acc_1"])
-        print("Top-1: {:.2f} (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(100 * mean, 100 * low, 100 * up, 100 * worst, 100 * best))
-        mean, low, up, worst, best = stats(run_stats["best_test_acc_5"])
-        print("Top-5: {:.2f} (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(100 * mean, 100 * low, 100 * up, 100 * worst, 100 * best))        
+        stats(run_stats["best_test_acc_1"], "1-shot")
+        stats(run_stats["best_test_acc_5"], "5-shot")
     else:
-        mean, low, up, worst, best = stats(run_stats["test_acc"])
-        print("Top-1: {:.2f} (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(100 * mean, 100 * low, 100 * up, 100 * worst, 100 * best))
+        stats(run_stats["test_acc"], "Top-1")
         if top_5:
-            mean, low, up, worst, best = stats(run_stats["test_acc_top_5"])
-            print("Top-5: {:.2f} (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(100 * mean, 100 * low, 100 * up, 100 * worst, 100 * best))
+            stats(run_stats["test_acc_top_5"], "Top-5")
 
 if args.output != "":
     f = open(args.output, "a")

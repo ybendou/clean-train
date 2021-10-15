@@ -13,14 +13,14 @@ def format_time(duration):
     h = (duration // 3600)
     return "{:d}h{:02d}m{:02d}s".format(h,m,s)
 
-def stats(scores):
+def stats(scores, name):
     if len(scores) == 1:
         low, up = 0., 1.
     elif len(scores) < 30:
         low, up = st.t.interval(0.95, df = len(scores) - 1, loc = np.mean(scores), scale = st.sem(scores))
     else:
         low, up = st.norm.interval(0.95, loc = np.mean(scores), scale = st.sem(scores))
-    return np.mean(scores), float(low), float(up), np.min(scores), np.max(scores)
+    print("{:s} {:.2f} (± {:.2f}) (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(name, 100 * np.mean(scores), 100 * np.std(scores), 100 * low, 100 * up, 100 * np.min(scores), 100 * np.max(scores)))
 
 class ncm_output(nn.Module):
     def __init__(self, indim, outdim):
