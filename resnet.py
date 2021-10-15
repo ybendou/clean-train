@@ -23,7 +23,7 @@ class BasicBlock(nn.Module):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
-        return F.relu(out)
+        return out
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, feature_maps, input_shape, num_classes, few_shot, rotations):
@@ -47,6 +47,8 @@ class ResNet(nn.Module):
         for i in range(len(strides)):
             stride = strides[i]
             layers.append(block(self.in_planes, planes, stride))
+            if i < len(strides) - 1:
+                layers.append(nn.ReLU())
             self.in_planes = planes
         return nn.Sequential(*layers)
 
@@ -63,6 +65,7 @@ class ResNet(nn.Module):
             out = self.layers[i](out)
             if mixup_layer == i + 1:
                 out = lam * out + (1 - lam) * out[index_mixup]
+            out = F.relu(out)
         out = F.avg_pool2d(out, out.shape[2])
         features = out.view(out.size(0), -1)
         out = self.linear(features)

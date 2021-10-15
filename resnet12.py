@@ -12,7 +12,6 @@ class BasicBlockRN12(nn.Module):
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, planes, kernel_size=3, padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes)
-        self.mp = nn.MaxPool2d((2,2))
 
         self.shortcut = nn.Sequential(
             nn.Conv2d(in_planes, planes, kernel_size=1, bias=False),
@@ -24,7 +23,7 @@ class BasicBlockRN12(nn.Module):
         out = F.leaky_relu(self.bn2(self.conv2(out)), negative_slope = 0.1)
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
-        return self.mp(F.leaky_relu(out, negative_slope = 0.1))
+        return out
     
 class ResNet12(nn.Module):
     def __init__(self, feature_maps, input_shape, num_classes, few_shot, rotations):
@@ -38,6 +37,7 @@ class ResNet12(nn.Module):
         self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
         self.linear_rot = nn.Linear(10 * feature_maps, 4)
+        self.mp = nn.MaxPool2d((2,2))
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
@@ -57,6 +57,7 @@ class ResNet12(nn.Module):
             out = self.layers[i](out)
             if mixup_layer == i + 1:
                 out = lam * out + (1 - lam) * out[index_mixup]
+            out = self.mp(F.leaky_relu(out, negative_slope = 0.1))
         out = F.avg_pool2d(out, out.shape[2])
         features = out.view(out.size(0), -1)
         out = self.linear(features)
