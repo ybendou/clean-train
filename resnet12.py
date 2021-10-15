@@ -38,6 +38,12 @@ class ResNet12(nn.Module):
         self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
         self.linear_rot = nn.Linear(10 * feature_maps, 4)
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
 
     def forward(self, x, index_mixup = None, lam = -1):
         if lam != -1:

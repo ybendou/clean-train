@@ -20,7 +20,7 @@ def stats(scores):
         low, up = st.t.interval(0.95, df = len(scores) - 1, loc = np.mean(scores), scale = st.sem(scores))
     else:
         low, up = st.norm.interval(0.95, loc = np.mean(scores), scale = st.sem(scores))
-    return np.mean(scores), float(low), float(up)
+    return np.mean(scores), float(low), float(up), np.min(scores), np.max(scores)
 
 class ncm_output(nn.Module):
     def __init__(self, indim, outdim):

@@ -221,6 +221,8 @@ if few_shot:
         "novel_run_indices_5" : novel_run_indices_5,
         "best_val_acc_5" : 0,
         "best_val_acc_1" : 0,
+        "best_val_acc_5_ever" : 0,
+        "best_val_acc_1_ever" : 0,
         "best_test_acc_5" : 0,
         "best_test_acc_1" : 0
     }
@@ -306,16 +308,16 @@ for i in range(args.runs):
     # print stats
     print("Run", i + 1, "/", args.runs)
     if few_shot:
-        mean, low, up = stats(run_stats["best_test_acc_1"])
-        print("Top-1: {:.2f} (conf: [{:.2f}, {:.2f}])".format(100 * mean, 100 * low, 100 * up))
-        mean, low, up = stats(run_stats["best_test_acc_5"])
-        print("Top-5: {:.2f} (conf: [{:.2f}, {:.2f}])".format(100 * mean, 100 * low, 100 * up))
+        mean, low, up, worst, best = stats(run_stats["best_test_acc_1"])
+        print("Top-1: {:.2f} (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(100 * mean, 100 * low, 100 * up, 100 * worst, 100 * best))
+        mean, low, up, worst, best = stats(run_stats["best_test_acc_5"])
+        print("Top-5: {:.2f} (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(100 * mean, 100 * low, 100 * up, 100 * worst, 100 * best))        
     else:
-        mean, low, up = stats(run_stats["test_acc"])
-        print("Top-1: {:.2f} (conf: [{:.2f}, {:.2f}])".format(100 * mean, 100 * low, 100 * up))
+        mean, low, up, worst, best = stats(run_stats["test_acc"])
+        print("Top-1: {:.2f} (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(100 * mean, 100 * low, 100 * up, 100 * worst, 100 * best))
         if top_5:
-            mean, low, up = stats(run_stats["test_acc_top_5"])
-            print("Top-5: {:.2f} (conf: [{:.2f}, {:.2f}])".format(100 * mean, 100 * low, 100 * up))
+            mean, low, up, worst, best = stats(run_stats["test_acc_top_5"])
+            print("Top-5: {:.2f} (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(100 * mean, 100 * low, 100 * up, 100 * worst, 100 * best))
 
 if args.output != "":
     f = open(args.output, "a")
