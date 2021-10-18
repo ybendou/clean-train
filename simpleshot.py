@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from args import *
+from utils import *
 
 n_runs = args.n_runs
 batch_few_shot_runs = 100
@@ -29,31 +30,11 @@ def generate_runs(data, run_classes, run_indices, batch_idx):
     res = torch.gather(cclasses, 2, run_indices)
     return res
 
-def power(features):
-    return torch.pow(features, 0.5)
-
-def sphering(features):
-    return features / torch.norm(features, p = 2, dim = 2, keepdim = True)
-
-def centering(features):
-    feat = features.reshape(-1, features.shape[2])
-    feat = feat - feat.mean(dim = 0, keepdim = True)
-    features = feat.reshape(features.shape)
-    return features
-
 def ncm(features, run_classes, run_indices, n_shots):
     with torch.no_grad():
         dim = features.shape[2]
         targets = torch.arange(n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
-        for i in range(len(args.preprocessing)):
-            if args.preprocessing[i] == 'R':
-                features = torch.relu(features)
-            if args.preprocessing[i] == 'P':
-                features = power(features)
-            if args.preprocessing[i] == 'E':
-                features = sphering(features)
-            if args.preprocessing[i] == 'M':
-                features = centering(features)
+        features = preprocess(features)
         score = 0
         for batch_idx in range(n_runs // batch_few_shot_runs):
             runs = generate_runs(features, run_classes, run_indices, batch_idx)

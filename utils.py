@@ -43,7 +43,33 @@ def linear(indim, outdim):
 
 def criterion_episodic(features, targets, n_shots = args.n_shots):
     feat = features.reshape(args.n_ways, -1, features.shape[1])
+    feat = preprocess(feat)
     means = torch.mean(feat[:,:n_shots], dim = 1)
     dists = torch.norm(feat[:,n_shots:].unsqueeze(2) - means.unsqueeze(0).unsqueeze(0), dim = 3, p = 2).reshape(-1, args.n_ways).pow(2)
     return torch.nn.CrossEntropyLoss()(-1 * dists / args.temperature, targets.reshape(args.n_ways,-1)[:,n_shots:].reshape(-1))
     
+
+def power(features):
+    return torch.pow(features, 0.5)
+
+def sphering(features):
+    return features / torch.norm(features, p = 2, dim = 2, keepdim = True)
+
+def centering(features):
+    feat = features.reshape(-1, features.shape[2])
+    feat = feat - feat.mean(dim = 0, keepdim = True).detach()
+    features = feat.reshape(features.shape)
+    return features
+
+def preprocess(features):
+    for i in range(len(args.preprocessing)):
+        if args.preprocessing[i] == 'R':
+            features = torch.relu(features)
+        if args.preprocessing[i] == 'P':
+            features = power(features)
+        if args.preprocessing[i] == 'E':
+            features = sphering(features)
+        if args.preprocessing[i] == 'M':
+            features = centering(features)
+    return features
+   

@@ -158,7 +158,14 @@ def train_complete(model, loaders, mixup = False):
     else:
         optimizer = torch.optim.SGD(model.parameters(), lr = args.lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
 
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = eval(args.milestones), gamma = args.gamma)
+    try:
+        milestones = int(args.milestones)
+        if milestones <= 0:
+            milestones = 1000000000
+        milestones = np.arange(milestones, args.epochs + args.manifold_mixup, milestones)
+    except:
+        milestones = eval(args.milestones)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = milestones, gamma = args.gamma)
         
     if few_shot:
         few_shot_meta_data["best_val_acc_1"] = 0
