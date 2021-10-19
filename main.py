@@ -160,12 +160,10 @@ def train_complete(model, loaders, mixup = False):
 
     try:
         milestones = int(args.milestones)
-        if milestones <= 0:
-            milestones = 1000000000
-        milestones = np.arange(milestones, args.epochs + args.manifold_mixup, milestones)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = milestones, gamma = args.gamma)
     except:
         milestones = eval(args.milestones)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = milestones, gamma = args.gamma)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = milestones, gamma = args.gamma)
         
     if few_shot:
         few_shot_meta_data["best_val_acc_1"] = 0
@@ -197,6 +195,14 @@ def train_complete(model, loaders, mixup = False):
         return few_shot_meta_data
     else:
         return test_stats
+
+random.seed(args.seed)
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+if args.deterministic:
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 ### process main arguments
 loaders, input_shape, num_classes, few_shot, top_5 = get_dataset(args.dataset)
@@ -268,20 +274,11 @@ def create_model():
 if args.test_features != "":
     test_features = torch.load(args.test_features).to(args.dataset_device)
     print("Testing features of shape", test_features.shape)
-    perf1 = 100 * ncm(test_features, few_shot_meta_data["novel_run_classes_1"], few_shot_meta_data["novel_run_indices_1"], 1)
-    perf5 = 100 * ncm(test_features, few_shot_meta_data["novel_run_classes_5"], few_shot_meta_data["novel_run_indices_5"], 5)
-    print("1-shot: {:.2f}%, 5-shot: {:.2f}%".format(perf1, perf5))
+    perf1, conf1 = ncm(test_features, few_shot_meta_data["novel_run_classes_1"], few_shot_meta_data["novel_run_indices_1"], 1)
+    perf5, conf5 = ncm(test_features, few_shot_meta_data["novel_run_classes_5"], few_shot_meta_data["novel_run_indices_5"], 5)
+    print("1-shot: {:.2f}% (± {:.2f}%), 5-shot: {:.2f}% (± {:.2f}%)".format(100 * perf1, 100 * conf1, 100 * perf5, 100 * conf5))
     sys.exit()
 
-random.seed(args.seed)
-np.random.seed(args.seed)
-torch.manual_seed(args.seed)
-torch.cuda.manual_seed_all(args.seed)
-if args.deterministic:
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-### here a run is a complete training of a model from scratch
-### can be long if run is large!!!
 for i in range(args.runs):
     if not args.quiet:
         print(args)

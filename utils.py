@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import scipy.stats as st
 import numpy as np
+import random
 
 # function to display timer
 def format_time(duration):
@@ -20,7 +21,10 @@ def stats(scores, name):
         low, up = st.t.interval(0.95, df = len(scores) - 1, loc = np.mean(scores), scale = st.sem(scores))
     else:
         low, up = st.norm.interval(0.95, loc = np.mean(scores), scale = st.sem(scores))
-    print("{:s} {:.2f} (± {:.2f}) (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(name, 100 * np.mean(scores), 100 * np.std(scores), 100 * low, 100 * up, 100 * np.min(scores), 100 * np.max(scores)))
+    if name == "":
+        return np.mean(scores), up - np.mean(scores)
+    else:
+        print("{:s} {:.2f} (± {:.2f}) (conf: [{:.2f}, {:.2f}]) (worst: {:.2f}, best: {:.2f})".format(name, 100 * np.mean(scores), 100 * np.std(scores), 100 * low, 100 * up, 100 * np.min(scores), 100 * np.max(scores)))
 
 class ncm_output(nn.Module):
     def __init__(self, indim, outdim):

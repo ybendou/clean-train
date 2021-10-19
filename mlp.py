@@ -1,4 +1,5 @@
 from utils import *
+from args import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,6 +23,8 @@ class MLP(nn.Module):
         features = x.reshape(x.shape[0], -1)
         for i in range(len(self.layers)):
             features = self.module_layers[i](features)
+            if args.dropout > 0:
+                out = F.dropout(out, p=args.dropout, training=self.training, inplace=True)
         out = self.last_layer(features)
         if self.rotations:
             out_rot = self.linear_rot(features)

@@ -1,4 +1,5 @@
 from utils import *
+from args import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -43,7 +44,7 @@ class NetworkBlock(nn.Module):
         return self.layer(x)
 
 class WideResNet(nn.Module):
-    def __init__(self, feature_maps, input_shape, few_shot, rotations, depth = 28, widen_factor = 10, num_classes = 64, drop_rate = 0.5):
+    def __init__(self, feature_maps, input_shape, few_shot, rotations, depth = 28, widen_factor = 10, num_classes = 64, drop_rate = args.dropout):
         super(WideResNet, self).__init__()
         nChannels = [feature_maps, feature_maps*widen_factor, 2 * feature_maps*widen_factor, 4 * feature_maps*widen_factor]
         n = (depth - 4) / 6

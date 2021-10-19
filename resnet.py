@@ -1,4 +1,5 @@
 from utils import *
+from args import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,6 +24,8 @@ class BasicBlock(nn.Module):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
+        if args.dropout > 0:
+            out = F.dropout(out, p=args.dropout, training=self.training, inplace=True)
         return out
 
 class ResNet(nn.Module):

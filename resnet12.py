@@ -1,4 +1,5 @@
 from utils import *
+from args import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,6 +24,8 @@ class BasicBlockRN12(nn.Module):
         out = F.leaky_relu(self.bn2(self.conv2(out)), negative_slope = 0.1)
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
+        if args.dropout > 0:
+            out = F.dropout(out, p=args.dropout, training=self.training, inplace=True)
         return out
     
 class ResNet12(nn.Module):
