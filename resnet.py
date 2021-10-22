@@ -76,3 +76,9 @@ class ResNet(nn.Module):
             out_rot = self.linear_rot(features)
             return (out, out_rot), features
         return out, features
+
+def ResNet18(feature_maps, input_shape, num_classes, few_shot, rotations):
+    return ResNet(BasicBlock, [2, 2, 2, 2], feature_maps, input_shape, num_classes, few_shot, rotations)
+
+def ResNet20(feature_maps, input_shape, num_classes, few_shot, rotations):
+    return ResNet(BasicBlock, [3, 3, 3], feature_maps, input_shape, num_classes, few_shot, rotations)

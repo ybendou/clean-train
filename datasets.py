@@ -281,9 +281,10 @@ def cifarfs(data_augmentation = True):
         train_loader = episodic_iterator(train_data, 64, transforms = list_trans_train)
     else:
         train_loader = iterator(train_data, train_targets, transforms = list_trans_train)
+    train_clean = iterator(train_data, train_targets, transforms = norm, shuffle = False)
     val_loader = iterator(val_data, val_targets, transforms = norm, shuffle = False)
     test_loader = iterator(test_data, test_targets, transforms = norm, shuffle = False)
-    return (train_loader, val_loader, test_loader), [3, 32, 32], (64, 16, 20, 600), True, False
+    return (train_loader, train_clean, val_loader, test_loader), [3, 32, 32], (64, 16, 20, 600), True, False
 
 from PIL import Image
 
@@ -322,9 +323,10 @@ def miniImageNet(use_hd = True):
         train_loader = episodic_iterator(datasets["train"][0], 64, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
         train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
+    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    return (train_loader, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
+    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 import pickle
 
@@ -390,9 +392,10 @@ def CUBfs():
         train_loader = episodic_iterator(train, 100, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
         train_loader = iterator(train, train_targets, transforms = train_transforms, forcecpu = True)
+    train_clean = iterator(train, train_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     val_loader = iterator(validation, validation_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     test_loader = iterator(novel, novel_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
-    return (train_loader, val_loader, test_loader), [3, 84, 84], (100, 50, 50, (num_elements_val, num_elements_novel)), True, False
+    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (100, 50, 50, (num_elements_val, num_elements_novel)), True, False
 
 def omniglotfs():
     base = torch.load(args.dataset_path + "omniglot/base.pt")
@@ -410,9 +413,10 @@ def omniglotfs():
         train_loader = episodic_iterator(base_data, base.shape[0], transforms = train_transforms)
     else:
         train_loader = iterator(base_data, base_targets, transforms = train_transforms)
+    train_clean = iterator(base_data, base_targets, transforms = all_transforms, shuffle = False)
     val_loader = iterator(val_data, val_targets, transforms = all_transforms, shuffle = False)
     test_loader = iterator(novel_data, novel_targets, transforms = all_transforms, shuffle = False)
-    return (train_loader, val_loader, test_loader), [1, 100, 100], (base.shape[0], val.shape[0], novel.shape[0], novel.shape[1]), True, False
+    return (train_loader, train_clean, val_loader, test_loader), [1, 100, 100], (base.shape[0], val.shape[0], novel.shape[0], novel.shape[1]), True, False
 
 def miniImageNet84():
     with open(args.dataset_path + "miniimagenet/train.pkl", 'rb') as f:
@@ -431,9 +435,10 @@ def miniImageNet84():
         train_loader = episodic_iterator(train, 64, transforms = train_transforms, forcecpu = True)
     else:
         train_loader = iterator(train, train_targets, transforms = train_transforms, forcecpu = True)
+    train_clean = iterator(train, train_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     val_loader = iterator(validation, validation_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
     test_loader = iterator(test, test_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
-    return (train_loader, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
+    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 def get_dataset(dataset_name):
     if args.dataset.lower() == "cifar10":
@@ -456,3 +461,5 @@ def get_dataset(dataset_name):
         return omniglotfs()
     else:
         print("Unknown dataset!")
+
+print("datasets, ", end='')

@@ -1,6 +1,7 @@
 import argparse
 import os
 import random
+import numpy as np
 
 parser = argparse.ArgumentParser(description="""Optimized code for training usual datasets/model
 
@@ -27,6 +28,8 @@ To train CIFARFS (few-shot) with 86.83% accuracy (70.27% in 1-shot) (3h):
 python main.py --dataset cifarfs --mixup --model wideresnet --feature-maps 16 --skip-epochs 300 --rotations --preprocessing "PEME"
 To train MiniImageNet (few-shot) with 80.43% accuracy (64.11% in 1-shot) (2h):
 python main.py --dataset miniimagenet --model resnet12 --gamma 0.2 --milestones 30 --epochs 120 --batch-size 128 --preprocessing 'EME'
+To train MiniImageNet (few-shot) with rotations and 81.63% accuracy (65.64% in 1-shot) (2h):
+python main.py --dataset miniimagenet --model resnet12 --milestones 60 --epochs 240 --cosine --gamma 1 --rotations --skip-epochs 200
 To train MiniImageNet (few-shot) with 83.18% accuracy (66.78% in 1-shot) (40h):
 python main.py --device cuda:012 --dataset miniimagenet --model S2M2R --lr -0.001 --milestones 0 --epochs 600 --feature-maps 16 --rotations --manifold-mixup 400 --skip-epochs 600 --preprocessing "PEME"
 """, formatter_class=argparse.RawTextHelpFormatter)
@@ -37,14 +40,15 @@ parser.add_argument("--feature-maps", type=int, default=64, help="number of feat
 parser.add_argument("--lr", type=float, default="0.1", help="initial learning rate (negative is for Adam, e.g. -0.001)")
 parser.add_argument("--epochs", type=int, default=350, help="total number of epochs")
 parser.add_argument("--milestones", type=str, default="100", help="milestones for lr scheduler, can be int (then milestones every X epochs) or list. 0 means no milestones")
-parser.add_argument("--gamma", type=float, default=0.1, help="multiplier for lr at milestones")
+parser.add_argument("--gamma", type=float, default=-1., help="multiplier for lr at milestones")
+parser.add_argument("--cosine", action="store_true", help="use cosine annealing scheduler with args.milestones as T_max")
 parser.add_argument("--mixup", action="store_true", help="use of mixup since beginning")
 parser.add_argument("--dropout", type=float, default=0, help="use dropout")
 parser.add_argument("--rotations", action="store_true", help="use of rotations self-supervision during training")
 parser.add_argument("--model", type=str, default="ResNet18", help="model to train")
 parser.add_argument("--preprocessing", type=str, default="", help="preprocessing sequence for few shot, can contain R:relu P:sqrt E:sphering and M:centering")
 parser.add_argument("--manifold-mixup", type=int, default="0", help="deploy manifold mixup as fine-tuning as in S2M2R for the given number of epochs")
-parser.add_argument("--temperature", type=float, default=1., help="multiplication factor before softmax")
+parser.add_argument("--temperature", type=float, default=1., help="multiplication factor before softmax when using episodic")
 
 
 ### pytorch options
@@ -67,20 +71,23 @@ parser.add_argument("--load-model", type=str, default="", help="load model from 
 parser.add_argument("--seed", type=int, default=-1, help="set random seed manually, and also use deterministic approach")
 
 ### few-shot parameters
+parser.add_argument("--n-shots", type=str, default="[1,5]", help="how many shots per few-shot run, can be int or list of ints. In case of episodic training, use first item of list as number of shots.")
 parser.add_argument("--n-runs", type=int, default=10000, help="number of few-shot runs")
 parser.add_argument("--n-ways", type=int, default=5, help="number of few-shot ways")
 parser.add_argument("--n-queries", type=int, default=15, help="number of few-shot queries")
 parser.add_argument("--ncm-loss", action="store_true", help="use ncm output instead of linear")
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
-parser.add_argument("--n-shots", type=int, default=1, help="number of shots used during episodic training")
 
 args = parser.parse_args()
 
+### process arguments
 if args.dataset_device == "":
     args.dataset_device = args.device
+    
 if args.dataset_path[-1] != '/':
     args.dataset_path += "/"
+
 if args.device[:5] == "cuda:" and len(args.device) > 5:
     args.devices = []
     for i in range(len(args.device) - 5):
@@ -91,3 +98,25 @@ else:
 
 if args.seed == -1:
     args.seed = random.randint(0, 1000000000)
+
+try:
+    n_shots = int(args.n_shots)
+    args.n_shots = [n_shots]
+except:
+    args.n_shots = eval(args.n_shots)
+
+try:
+    milestone = int(args.milestones)
+    args.milestones = list(np.arange(milestone, args.epochs + args.manifold_mixup, milestone))
+except:
+    args.milestones = eval(args.milestones)
+if args.milestones == [] and args.cosine:
+    args.milestones = [args.epochs + args.manifold_mixup]
+
+if args.gamma == -1:
+    if args.cosine:
+        args.gamma = 1.
+    else:
+        args.gamma = 0.1
+    
+print("args, ", end='')

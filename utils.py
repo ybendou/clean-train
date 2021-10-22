@@ -6,6 +6,15 @@ import scipy.stats as st
 import numpy as np
 import random
 
+### generate random seeds
+random.seed(args.seed)
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed_all(args.seed)
+if args.deterministic:
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 # function to display timer
 def format_time(duration):
     duration = int(duration)
@@ -45,35 +54,37 @@ def linear(indim, outdim):
     else:
         return nn.Linear(indim, outdim)
 
-def criterion_episodic(features, targets, n_shots = args.n_shots):
+def criterion_episodic(features, targets, n_shots = args.n_shots[0]):
     feat = features.reshape(args.n_ways, -1, features.shape[1])
-    feat = preprocess(feat)
+    feat = preprocess(feat, feat)
     means = torch.mean(feat[:,:n_shots], dim = 1)
     dists = torch.norm(feat[:,n_shots:].unsqueeze(2) - means.unsqueeze(0).unsqueeze(0), dim = 3, p = 2).reshape(-1, args.n_ways).pow(2)
     return torch.nn.CrossEntropyLoss()(-1 * dists / args.temperature, targets.reshape(args.n_ways,-1)[:,n_shots:].reshape(-1))
-    
-
-def power(features):
-    return torch.pow(features, 0.5)
 
 def sphering(features):
     return features / torch.norm(features, p = 2, dim = 2, keepdim = True)
 
-def centering(features):
-    feat = features.reshape(-1, features.shape[2])
-    feat = feat - feat.mean(dim = 0, keepdim = True).detach()
-    features = feat.reshape(features.shape)
-    return features
+def centering(train_features, features):
+    return features - train_features.reshape(-1, train_features.shape[2]).mean(dim = 0).unsqueeze(0).unsqueeze(0)
 
-def preprocess(features):
+def preprocess(train_features, features):
     for i in range(len(args.preprocessing)):
         if args.preprocessing[i] == 'R':
+            with torch.no_grad():
+                train_features = torch.relu(train_features)
             features = torch.relu(features)
         if args.preprocessing[i] == 'P':
-            features = power(features)
+            with torch.no_grad():
+                train_features = torch.pow(train_features, 0.5)
+            features = torch.pow(features, 0.5)
         if args.preprocessing[i] == 'E':
+            with torch.no_grad():
+                train_features = sphering(train_features)
             features = sphering(features)
         if args.preprocessing[i] == 'M':
-            features = centering(features)
+            features = centering(train_features, features)
+            with torch.no_grad():
+                train_features = centering(train_features, train_features)
     return features
    
+print("utils, ", end='')
