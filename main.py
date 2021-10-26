@@ -262,7 +262,7 @@ if args.test_features != "":
     val_features = test_features[num_classes:num_classes + val_classes]
     test_features = test_features[num_classes + val_classes:]
     for i in range(len(args.n_shots)):
-        val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, novel_features, few_shot_meta_data)
+        val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, test_features, few_shot_meta_data)
         print("{:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
     sys.exit()
 
