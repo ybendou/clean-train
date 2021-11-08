@@ -27,7 +27,7 @@ import wandb
 
 wandb.init(project="few-shot", 
            entity="bendouy", 
-           tags=['Test', args.dataset], 
+           tags=['marry', args.dataset], 
            notes=str(vars(args))
            )
 wandb.config = {
