@@ -122,7 +122,7 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
                 print("\r{:4d} loss: {:.5f} ".format(epoch, losses / total), end = '')
             last_update = time.time()
     
-    wandb.log({"train_loss": losses / total})
+    wandb.log({"epoch":epoch, "train_loss": losses / total})
 
     # return train_loss
     return { "train_loss" : losses / total}
@@ -200,7 +200,7 @@ def train_complete(model, loaders, mixup = False):
                 res = few_shot_eval.update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data)
                 for i in range(len(args.n_shots)):
                     print("val-{:d}: {:.2f}%, nov-{:d}: {:.2f}% ({:.2f}%) ".format(args.n_shots[i], 100 * res[i][0], args.n_shots[i], 100 * res[i][2], 100 * few_shot_meta_data["best_novel_acc"][i]), end = '')
-                    wandb.log({f'val-{args.n_shots[i]}':res[i][0], f'nov-{args.n_shots[i]}':res[i][2]})
+                    wandb.log({'epoch':epoch, f'val-{args.n_shots[i]}':res[i][0], f'nov-{args.n_shots[i]}':res[i][2]})
 
                 print()
             else:
@@ -328,7 +328,7 @@ for i in range(args.runs):
     if few_shot:
         for index in range(len(args.n_shots)):
             stats(np.array(run_stats["best_novel_acc"])[:,index], "{:d}-shot".format(args.n_shots[index]))
-            wandb.log({"run": i+1,"test acc {:d}-shot".format(i+1, args.n_shots[index]):np.mean(np.array(run_stats["best_novel_acc"])[:,index])})
+            wandb.log({"run": i+1,"test acc {:d}-shot".format(args.n_shots[index]):np.mean(np.array(run_stats["best_novel_acc"])[:,index])})
     else:
         stats(run_stats["test_acc"], "Top-1")
         if top_5:
