@@ -36,20 +36,9 @@ def ncm(train_features, features, run_classes, run_indices, n_shots):
         scores = []
         for batch_idx in range(n_runs // batch_few_shot_runs):
             runs = generate_runs(features, run_classes, run_indices, batch_idx)
-            print("----------- runs shape")
-            print(runs.size())
-            print(runs[:,:,n_shots:].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim).size())
             means = torch.mean(runs[:,:,:n_shots], dim = 2)
-            print('means :', means.size())
-            print('means reshape :', means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim).size())
             distances = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim), dim = 4, p = 2)
-            
-            print('distances :', distances.size())
-            
             winners = torch.min(distances, dim = 2)[1]
-
-            print('winners :', winners.size())
-
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
@@ -70,9 +59,6 @@ def cosinesim(train_features, features, run_classes, run_indices, n_shots):
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
-
-
-
 def get_features(model, loader):
     model.eval()
     all_features, offset, max_offset = [], 100000, 0
@@ -88,7 +74,7 @@ def get_features(model, loader):
     return torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
 
 def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots):
-    return cosinesim(train_features, val_features, val_run_classes, val_run_indices, n_shots), cosinesim(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
+    return ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
 
 def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data):
 

@@ -71,8 +71,6 @@ def centering_cosine(train_features, features):
     mean_train_features = train_features.reshape(-1, train_features.shape[2]).mean(dim = 0).unsqueeze(0).unsqueeze(0)
     return features - sphering(mean_train_features)
 
-
-
 def preprocess(train_features, features):
     for i in range(len(args.preprocessing)):
         if args.preprocessing[i] == 'R':
@@ -88,7 +86,7 @@ def preprocess(train_features, features):
                 train_features = sphering(train_features)
             features = sphering(features)
         if args.preprocessing[i] == 'M':
-            features = centering_cosine(train_features, features) #centering(train_features, features)
+            features = centering(train_features, features) #centering_cosine(train_features, features)
             with torch.no_grad():
                 train_features = centering(train_features, train_features)
     return features
