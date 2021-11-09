@@ -1,9 +1,10 @@
 from utils import *
-from args import *
+#from args import *
+from args_notebook import args
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+ 
 class BasicBlockRN12(nn.Module):
     def __init__(self, in_planes, planes):
         super(BasicBlockRN12, self).__init__()

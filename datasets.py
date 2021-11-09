@@ -1,5 +1,6 @@
 from torchvision import transforms, datasets
-from args import args
+#from args import args
+from args_notebook import args
 import numpy as np
 import torch
 import json
