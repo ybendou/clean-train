@@ -108,7 +108,7 @@ def train(model, T, L, train_loader, optimizer, epoch, mixup = False, mm = False
             features_preprocessed = T(features_preprocessed) # look for best projection
             features_preprocessed = sphering(features_preprocessed, dim=1) # renormalize by projecting on the sphere again
             output = L(features_preprocessed) # get the ouput
-
+            output = nn.Softmax(dim=1)(output)
             if args.rotations:
                 output, output_rot = output
                 loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
@@ -329,9 +329,7 @@ class transform(nn.Module):
     def forward(self, x):
         return self.linear(x)
     
-
-out_maps = 640
-
+out_maps = args.out_maps
 
 for i in range(args.runs):
 
@@ -341,7 +339,7 @@ for i in range(args.runs):
         wandb.log({"run": i})
     model = create_model()
 
-    T = transform(args.feature_maps, out_maps).cuda()
+    T = transform(args.feature_maps, out_maps=out_maps).cuda()
     L = nn.Linear(out_maps, 64, bias=False).cuda()
 
     if args.load_model != "":

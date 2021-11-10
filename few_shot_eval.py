@@ -31,7 +31,7 @@ def generate_runs(data, run_classes, run_indices, batch_idx):
 
 def ncm(train_features, features, run_classes, run_indices, n_shots, T):
     with torch.no_grad():
-        dim = features.shape[2]
+        dim = args.out_maps #features.shape[2]
         targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
         features = preprocess(train_features, features, T)
         scores = []

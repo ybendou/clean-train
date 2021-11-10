@@ -79,6 +79,7 @@ parser.add_argument("--ncm-loss", action="store_true", help="use ncm output inst
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
 parser.add_argument("--wandb", type=bool, default=False, help="report to wandb")
+parser.add_argument("--out-maps", type=int, default=640, help="output size of the feature map of the pre-processing")
 
 args = parser.parse_args()
 
