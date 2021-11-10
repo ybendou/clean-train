@@ -62,8 +62,8 @@ def criterion_episodic(features, targets, n_shots = args.n_shots[0]):
     dists = torch.norm(feat[:,n_shots:].unsqueeze(2) - means.unsqueeze(0).unsqueeze(0), dim = 3, p = 2).reshape(-1, args.n_ways).pow(2)
     return torch.nn.CrossEntropyLoss()(-1 * dists / args.temperature, targets.reshape(args.n_ways,-1)[:,n_shots:].reshape(-1))
 
-def sphering(features):
-    return features / torch.norm(features, p = 2, dim = 2, keepdim = True)
+def sphering(features, dim=2):
+    return features / torch.norm(features, p = 2, dim = dim, keepdim = True)
 
 def centering(train_features, features):
     return features - train_features.reshape(-1, train_features.shape[2]).mean(dim = 0).unsqueeze(0).unsqueeze(0)
@@ -72,7 +72,7 @@ def centering_cosine(train_features, features):
     mean_train_features = train_features.reshape(-1, train_features.shape[2]).mean(dim = 0).unsqueeze(0).unsqueeze(0)
     return features - sphering(mean_train_features)
 
-def preprocess(train_features, features):
+def preprocess(train_features, features, T):
     for i in range(len(args.preprocessing)):
         if args.preprocessing[i] == 'R':
             with torch.no_grad():
@@ -90,6 +90,12 @@ def preprocess(train_features, features):
             features = centering(train_features, features) #centering_cosine(train_features, features)
             with torch.no_grad():
                 train_features = centering(train_features, train_features)
+        if args.preprocessing[i] == 'T':
+            with torch.no_grad():
+                c, s, f = features.shape
+                features = features.reshape(c*s, 1, f)
+                features = T(features) 
+                features = features.reshape(c,s,f)
     return features
    
 print("utils, ", end='')

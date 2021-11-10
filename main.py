@@ -20,6 +20,7 @@ import wideresnet
 import resnet12
 import s2m2
 import mlp
+import itertools
 print("models.")
 
 
@@ -103,9 +104,9 @@ def train(model, T, L, train_loader, optimizer, epoch, mixup = False, mm = False
                 loss = lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])
         else:
             _, features = model(data)
-            features_preprocessed = sphering(features_preprocessed) # first normalize
+            features_preprocessed = sphering(features, dim=1) # first normalize
             features_preprocessed = T(features_preprocessed) # look for best projection
-            features_preprocessed = sphering(features_preprocessed) # renormalize by projecting on the sphere again
+            features_preprocessed = sphering(features_preprocessed, dim=1) # renormalize by projecting on the sphere again
             output = L(features_preprocessed) # get the ouput
 
             if args.rotations:
@@ -146,9 +147,9 @@ def test(model, T, L, test_loader):
         for data, target in test_loader:
             data, target = data.to(args.device), target.to(args.device)
             _, features = model(data)
-            features = sphering(features)
+            features = sphering(features, dim=1)
             features = T(features)
-            features = sphering(features)
+            features = sphering(features, dim=1)
             output = L(features)
             if args.rotations:
                 output, _ = output
@@ -226,7 +227,7 @@ def train_complete(model, T, L, loaders, mixup = False):
         
         if (epoch + 1) > args.skip_epochs:
             if few_shot:
-                res = few_shot_eval.update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data)
+                res = few_shot_eval.update_few_shot_meta_data(model, T, L, train_clean, novel_loader, val_loader, few_shot_meta_data)
                 for i in range(len(args.n_shots)):
                     print("val-{:d}: {:.2f}%, nov-{:d}: {:.2f}% ({:.2f}%) ".format(args.n_shots[i], 100 * res[i][0], args.n_shots[i], 100 * res[i][2], 100 * few_shot_meta_data["best_novel_acc"][i]), end = '')
                     if args.wandb:
@@ -242,7 +243,7 @@ def train_complete(model, T, L, loaders, mixup = False):
 
     if args.epochs + args.manifold_mixup <= args.skip_epochs:
         if few_shot:
-            res = few_shot_eval.update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data)
+            res = few_shot_eval.update_few_shot_meta_data(model, T, L, train_clean, novel_loader, val_loader, few_shot_meta_data)
         else:
             test_stats = test(model, test_loader)
 
