@@ -38,15 +38,10 @@ def stats(scores, name):
 class ncm_output(nn.Module):
     def __init__(self, indim, outdim):
         super(ncm_output, self).__init__()
-        self.linear = nn.Linear(indim, outdim, bias = False)
-        with torch.no_grad():
-            self.linear.weight.data = self.linear.weight.data / torch.norm(self.linear.weight.data, dim = 1, p = 2, keepdim = True) * torch.mean(torch.norm(self.linear.weight.data, dim = 1, p = 2))
-        self.linear = nn.utils.weight_norm(self.linear)
-        self.temp = nn.Parameter(torch.zeros(1) - 1)
+        self.linear = nn.Linear(indim, outdim)
 
     def forward(self, x):
-        x = x / torch.norm(x + 1e-6, dim = 1, p = 2, keepdim = True)
-        return torch.norm(x.reshape(x.shape[0], 1, -1) - self.linear.weight_v.transpose(0,1).reshape(1, -1, x.shape[1]), dim = 2).pow(2) / self.temp
+        return -1 * torch.norm(x.reshape(x.shape[0], 1, -1) - self.linear.weight.transpose(0,1).reshape(1, -1, x.shape[1]), dim = 2).pow(2) - self.linear.bias
 
 def linear(indim, outdim):
     if args.ncm_loss:

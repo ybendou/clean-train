@@ -56,7 +56,7 @@ class WideResNet(nn.Module):
         self.bn = nn.BatchNorm2d(nChannels[3])
         self.linear = linear(nChannels[3], int(num_classes))
         self.rotations = rotations
-        self.linear_rot = nn.Linear(nChannels[3], 4)
+        self.linear_rot = linear(nChannels[3], 4)
 
     def forward(self, x, index_mixup = None, lam = -1):
         if lam != -1:

@@ -42,6 +42,22 @@ def ncm(train_features, features, run_classes, run_indices, n_shots):
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
+def ncm_cosine(train_features, features, run_classes, run_indices, n_shots):
+    with torch.no_grad():
+        dim = features.shape[2]
+        targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
+        features = preprocess(train_features, features)
+        features = sphering(features)
+        scores = []
+        for batch_idx in range(n_runs // batch_few_shot_runs):
+            runs = generate_runs(features, run_classes, run_indices, batch_idx)
+            means = torch.mean(runs[:,:,:n_shots], dim = 2)
+            means = sphering(means)
+            distances = torch.einsum("bwysd,bwysd->bwys",runs[:,:,n_shots:].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim), means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim))
+            winners = torch.max(distances, dim = 2)[1]
+            scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
+        return stats(scores, "")
+
 def get_features(model, loader):
     model.eval()
     all_features, offset, max_offset = [], 100000, 0

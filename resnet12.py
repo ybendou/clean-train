@@ -39,7 +39,7 @@ class ResNet12(nn.Module):
         self.layers = nn.Sequential(*layers)
         self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
-        self.linear_rot = nn.Linear(10 * feature_maps, 4)
+        self.linear_rot = linear(10 * feature_maps, 4)
         self.mp = nn.MaxPool2d((2,2))
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
