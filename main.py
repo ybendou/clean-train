@@ -52,8 +52,10 @@ def crit(output, features, target):
         return criterion(output, target)
 
 ### main train function
-def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
+def train(model, T, L, train_loader, optimizer, epoch, mixup = False, mm = False):
     model.train()
+    T.train()
+    L.train()
     global last_update
     losses, total = 0., 0
     
@@ -100,7 +102,12 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             else:
                 loss = lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])
         else:
-            output, features = model(data)
+            _, features = model(data)
+            features_preprocessed = sphering(features_preprocessed) # first normalize
+            features_preprocessed = T(features_preprocessed) # look for best projection
+            features_preprocessed = sphering(features_preprocessed) # renormalize by projecting on the sphere again
+            output = L(features_preprocessed) # get the ouput
+
             if args.rotations:
                 output, output_rot = output
                 loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
@@ -129,14 +136,20 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
     return { "train_loss" : losses / total}
 
 # function to compute accuracy in the case of standard classification
-def test(model, test_loader):
+def test(model, T, L, test_loader):
     model.eval()
+    T.eval()
+    L.eval()
     test_loss, accuracy, accuracy_top_5, total = 0, 0, 0, 0
     
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(args.device), target.to(args.device)
-            output, _ = model(data)
+            _, features = model(data)
+            features = sphering(features)
+            features = T(features)
+            features = sphering(features)
+            output = L(features)
             if args.rotations:
                 output, _ = output
             test_loss += criterion(output, target).item() * data.shape[0]
@@ -154,6 +167,8 @@ def test(model, test_loader):
 
     # return results
     model.train()
+    T.train()
+    L.train()
     if args.wandb:
         wandb.log({ "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total})
 
@@ -161,7 +176,7 @@ def test(model, test_loader):
 
 # function to train a model using args.epochs epochs
 # at each args.milestones, learning rate is multiplied by args.gamma
-def train_complete(model, loaders, mixup = False):
+def train_complete(model, T, L, loaders, mixup = False):
     global start_time
     start_time = time.time()
 
@@ -174,25 +189,38 @@ def train_complete(model, loaders, mixup = False):
 
     lr = args.lr
 
+    # freeze backbone weights : 
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # extract norm of L : 
+    L = nn.utils.weight_norm(L, name='weight')
+    L.weight_g = torch.nn.Parameter(torch.ones(1, 64, device=args.device)) # Project L on the sphere.
+    L.weight_g.requires_grad = False # Don't update the norm anymore to keep it on the sphere
+
     for epoch in range(args.epochs + args.manifold_mixup):
 
         if (args.cosine and epoch % args.milestones[0] == 0) or epoch == 0:
             if lr < 0:
-                optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr)
+                optimizer = torch.optim.Adam(itertools.chain(T.parameters(), L.parameters()), lr = -1 * lr)
+
             else:
-                optimizer = torch.optim.SGD(model.parameters(), lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
+                optimizer = torch.optim.SGD(itertools.chain(T.parameters(), L.parameters()), lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
+
             if args.cosine:
                 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones[0])
                 lr = lr * args.gamma
             else:
                 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = args.milestones, gamma = args.gamma)
 
-        train_stats = train(model, train_loader, optimizer, (epoch + 1), mixup = mixup, mm = epoch >= args.epochs)
+        train_stats = train(model, T, L, train_loader, optimizer, (epoch + 1), mixup = mixup, mm = epoch >= args.epochs)
         scheduler.step()
         
         if args.save_model != "" and not few_shot:
             if len(args.devices) == 1:
                 torch.save(model.state_dict(), args.save_model)
+                torch.save(T.state_dict(), args.save_model+"T")
+                torch.save(L.state_dict(), args.save_model+"L")
             else:
                 torch.save(model.module.state_dict(), args.save_model)
         
@@ -206,7 +234,7 @@ def train_complete(model, loaders, mixup = False):
 
                 print()
             else:
-                test_stats = test(model, test_loader)
+                test_stats = test(model, T, L, test_loader)
                 if top_5:
                     print("top-1: {:.2f}%, top-5: {:.2f}%".format(100 * test_stats["test_acc"], 100 * test_stats["top_5"]))
                 else:
@@ -291,6 +319,19 @@ if args.test_features != "":
         print("{:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
     sys.exit()
 
+
+class transform(nn.Module):
+    def __init__(self, feature_maps=64, out_maps=640):
+        super(transform, self).__init__()
+        self.linear = nn.Linear(10*feature_maps, out_maps, bias=True)
+    
+    def forward(self, x):
+        return self.linear(x)
+    
+
+out_maps = 640
+
+
 for i in range(args.runs):
 
     if not args.quiet:
@@ -298,6 +339,9 @@ for i in range(args.runs):
     if args.wandb:
         wandb.log({"run": i})
     model = create_model()
+
+    T = transform(args.feature_maps, out_maps).cuda()
+    L = nn.Linear(out_maps, 64, bias=False).cuda()
 
     if args.load_model != "":
         model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
@@ -310,7 +354,7 @@ for i in range(args.runs):
         print("Number of trainable parameters in model is: " + str(np.sum([p.numel() for p in model.parameters()])))
 
     # training
-    test_stats = train_complete(model, loaders, mixup = args.mixup)
+    test_stats = train_complete(model, T, L, loaders, mixup = args.mixup)
 
     # assemble stats
     for item in test_stats.keys():

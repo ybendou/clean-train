@@ -1,7 +1,7 @@
 import torch
 import numpy as np
-#from args import *
-from args_notebook import args
+from args import *
+#from args_notebook import args
 from utils import *
 
 n_runs = args.n_runs
