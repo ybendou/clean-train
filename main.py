@@ -183,7 +183,7 @@ def train_complete(model, loaders, mixup = False):
             else:
                 test_stats = test(model, test_loader)
                 if top_5:
-                    print("top-1: {:.2f}%, top-5: {:.2f}%".format(100 * test_stats["test_acc"], 100 * test_stats["top_5"]))
+                    print("top-1: {:.2f}%, top-5: {:.2f}%".format(100 * test_stats["test_acc"], 100 * test_stats["test_acc_top_5"]))
                 else:
                     print("test acc: {:.2f}%".format(100 * test_stats["test_acc"]))
 
