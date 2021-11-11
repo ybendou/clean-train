@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class BasicBlockRN12(nn.Module):
-    def __init__(self, in_planes, planes):
+    def __init__(self, in_planes, planes, relu=True):
         super(BasicBlockRN12, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -13,7 +13,7 @@ class BasicBlockRN12(nn.Module):
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, planes, kernel_size=3, padding=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes)
-
+        self.relu = relu
         self.shortcut = nn.Sequential(
             nn.Conv2d(in_planes, planes, kernel_size=1, bias=False),
             nn.BatchNorm2d(planes)
@@ -21,7 +21,10 @@ class BasicBlockRN12(nn.Module):
 
     def forward(self, x):
         out = F.leaky_relu(self.bn1(self.conv1(x)), negative_slope = 0.1)
-        out = F.leaky_relu(self.bn2(self.conv2(out)), negative_slope = 0.1)
+        if self.relu:
+            out = F.leaky_relu(self.bn2(self.conv2(out)), negative_slope = 0.1)
+        else:
+            out = self.bn2(self.conv2(out))
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
         if args.dropout > 0:
@@ -35,7 +38,7 @@ class ResNet12(nn.Module):
         layers.append(BasicBlockRN12(input_shape[0], feature_maps))
         layers.append(BasicBlockRN12(feature_maps, int(2.5 * feature_maps)))
         layers.append(BasicBlockRN12(int(2.5 * feature_maps), 5 * feature_maps))
-        layers.append(BasicBlockRN12(5 * feature_maps, 10 * feature_maps))        
+        layers.append(BasicBlockRN12(5 * feature_maps, feature_maps, relu=False))        
         self.layers = nn.Sequential(*layers)
         self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
@@ -63,8 +66,8 @@ class ResNet12(nn.Module):
             out = self.mp(F.leaky_relu(out, negative_slope = 0.1))
         out = F.avg_pool2d(out, out.shape[2])
         features = out.view(out.size(0), -1)
-        out = self.linear(features)
+        #out = self.linear(features)
         if self.rotations:
             out_rot = self.linear_rot(features)
             return (out, out_rot), features
-        return out, features
+        return features, features
