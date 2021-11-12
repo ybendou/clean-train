@@ -78,7 +78,7 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             output, features = model(data_mixed)
             if args.rotations:
                 output, output_rot = output
-                loss = ((lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])) + (lam * crit(output_rot, features_rot, target_rot) + (1 - lam) * crit(output_rot, features_rot, target_rot[index_mixup]))) / 2
+                loss = ((lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])) + (lam * crit(output_rot, features, target_rot) + (1 - lam) * crit(output_rot, features, target_rot[index_mixup]))) / 2
             else:
                 loss = lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])
         else:
