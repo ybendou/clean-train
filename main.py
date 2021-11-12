@@ -110,7 +110,7 @@ def train(model, train_loader, optimizer, epoch, list_of_superclasses, mixup = F
                     super_classes_hash = list_of_superclasses[k]
                     new_target = torch.LongTensor([super_classes_hash[t.item()] for t in target]).cuda()
                     loss += crit(output_k, features, new_target)
-                    
+                loss = loss/args.K
                 #new_target = torch.LongTensor([list_of_superclasses[k][t.item()] for k in range(args.K)for t in target]).cuda() 
                 #loss = crit(output, features, new_target)
 
