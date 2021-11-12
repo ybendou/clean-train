@@ -80,6 +80,10 @@ parser.add_argument("--ncm-loss", action="store_true", help="use ncm output inst
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
 
+parser.add_argument("--K", type=int, default=3, help="number of combinaison of pairs")
+
+
+
 args = parser.parse_args()
 
 ### process arguments

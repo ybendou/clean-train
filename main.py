@@ -51,7 +51,7 @@ def crit(output, features, target):
         return criterion(output, target)
 
 ### main train function
-def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
+def train(model, train_loader, optimizer, epoch, list_of_superclasses, mixup = False, mm = False):
     model.train()
     global last_update
     losses, total = 0., 0
@@ -104,7 +104,17 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
                 output, output_rot = output
                 loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
             else:
-                loss = crit(output, features, target)
+                loss = 0.
+                for k in range(args.K):
+                    output_k = output[:,32*k:32*(k+1)]
+                    super_classes_hash = list_of_superclasses[k]
+                    new_target = torch.LongTensor([super_classes_hash[t.item()] for t in target]).cuda()
+                    loss += crit(output_k, features, new_target)
+                    
+                #new_target = torch.LongTensor([list_of_superclasses[k][t.item()] for k in range(args.K)for t in target]).cuda() 
+                #loss = crit(output, features, new_target)
+
+
 
         # backprop loss
         loss.backward()
@@ -161,7 +171,7 @@ def test(model, test_loader):
 
 # function to train a model using args.epochs epochs
 # at each args.milestones, learning rate is multiplied by args.gamma
-def train_complete(model, loaders, mixup = False):
+def train_complete(model, loaders, list_of_superclasses, mixup = False):
     global start_time
     start_time = time.time()
 
@@ -187,7 +197,7 @@ def train_complete(model, loaders, mixup = False):
             else:
                 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = args.milestones, gamma = args.gamma)
 
-        train_stats = train(model, train_loader, optimizer, (epoch + 1), mixup = mixup, mm = epoch >= args.epochs)
+        train_stats = train(model, train_loader, optimizer, (epoch + 1), list_of_superclasses, mixup = mixup, mm = epoch >= args.epochs)
         scheduler.step()
         
         if args.save_model != "" and not few_shot:
@@ -292,7 +302,7 @@ if args.test_features != "":
     sys.exit()
 
 for i in range(args.runs):
-
+    
     if not args.quiet:
         print(args)
     
@@ -310,8 +320,11 @@ for i in range(args.runs):
     if i == 0:
         print("Number of trainable parameters in model is: " + str(np.sum([p.numel() for p in model.parameters()])))
 
+    # generate super_classes:
+    list_of_superclasses = generate_super_classes()
+
     # training
-    test_stats = train_complete(model, loaders, mixup = args.mixup)
+    test_stats = train_complete(model, loaders, list_of_superclasses, mixup = args.mixup)
 
     # assemble stats
     for item in test_stats.keys():

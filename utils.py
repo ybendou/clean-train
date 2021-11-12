@@ -86,5 +86,35 @@ def preprocess(train_features, features):
             with torch.no_grad():
                 train_features = centering(train_features, train_features)
     return features
-   
+
+    
+import random
+def create_pairs():
+    classes = [i for i in range(64)]
+    l = classes.copy()
+    tuple_pairs = []
+    while len(l) > 1:
+
+        #Using the randomly created indices, respective elements are popped out
+        r1 = random.randrange(0, len(l))
+        elem1 = l.pop(r1)
+
+        r2 = random.randrange(0, len(l))
+        elem2 = l.pop(r2)
+
+        # now the selecetd elements are paired in a dictionary 
+
+        tuple_pairs.append((elem1, elem2))
+    return tuple_pairs
+
+def generate_super_classes():
+    list_of_superclasses = []
+    for k in range(args.K):
+        tuple_pairs = create_pairs()
+        super_classes = {i:tuple_pairs[i] for i in range(32)}
+        super_classes_hash = {**{v[0]:k_ for k_,v in super_classes.items()},**{v[1]:k_ for k_,v in super_classes.items()}} # get mapping from old classes to new pairs of classes
+        list_of_superclasses.append(super_classes_hash)
+
+    return list_of_superclasses
+
 print("utils, ", end='')

@@ -37,7 +37,7 @@ class ResNet12(nn.Module):
         layers.append(BasicBlockRN12(int(2.5 * feature_maps), 5 * feature_maps))
         layers.append(BasicBlockRN12(5 * feature_maps, 10 * feature_maps))        
         self.layers = nn.Sequential(*layers)
-        self.linear = linear(10 * feature_maps, num_classes)
+        self.linear = linear(10 * feature_maps, (num_classes//2)*args.K)
         self.rotations = rotations
         self.linear_rot = nn.Linear(10 * feature_maps, 4)
         self.mp = nn.MaxPool2d((2,2))
