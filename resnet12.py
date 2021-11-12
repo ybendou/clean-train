@@ -38,7 +38,7 @@ class ResNet12(nn.Module):
         layers.append(BasicBlockRN12(input_shape[0], feature_maps))
         layers.append(BasicBlockRN12(feature_maps, int(2.5 * feature_maps)))
         layers.append(BasicBlockRN12(int(2.5 * feature_maps), 5 * feature_maps))
-        layers.append(BasicBlockRN12(5 * feature_maps, feature_maps, relu=False))        
+        layers.append(BasicBlockRN12(5 * feature_maps, feature_maps))        
         self.layers = nn.Sequential(*layers)
         self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
@@ -63,7 +63,7 @@ class ResNet12(nn.Module):
             out = self.layers[i](out)
             if mixup_layer == i + 1:
                 out = lam * out + (1 - lam) * out[index_mixup]
-            out = self.mp(F.leaky_relu(out, negative_slope = 0.1))
+            out = self.mp(out)
         out = F.avg_pool2d(out, out.shape[2])
         features = out.view(out.size(0), -1)
         #out = self.linear(features)
