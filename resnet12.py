@@ -67,4 +67,4 @@ class ResNet12(nn.Module):
         if self.rotations:
             out_rot = self.linear_rot(features)
             return (out, out_rot), features
-        return out, features
+        return out, out

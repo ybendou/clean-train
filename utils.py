@@ -85,6 +85,12 @@ def preprocess(train_features, features):
             features = centering(train_features, features)
             with torch.no_grad():
                 train_features = centering(train_features, train_features)
+        if args.preprocessing[i] =='V':
+            features = normalizeVectorWise(features)
     return features
-   
+def normalizeVectorWise(X):
+    """
+        Make sum(X)=0
+    """
+    return X-X.mean(axis=2, keepdim=True)
 print("utils, ", end='')

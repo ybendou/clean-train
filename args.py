@@ -69,6 +69,8 @@ parser.add_argument("--save-model", type=str, default="", help="save model to fi
 parser.add_argument("--test-features", type=str, default="", help="test features and exit")
 parser.add_argument("--load-model", type=str, default="", help="load model from file")
 parser.add_argument("--seed", type=int, default=-1, help="set random seed manually, and also use deterministic approach")
+parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
+parser.add_argument("--wandb", type=bool, default=False, help="report to wandb")
 
 ### few-shot parameters
 parser.add_argument("--n-shots", type=str, default="[1,5]", help="how many shots per few-shot run, can be int or list of ints. In case of episodic training, use first item of list as number of shots.")
@@ -77,7 +79,6 @@ parser.add_argument("--n-ways", type=int, default=5, help="number of few-shot wa
 parser.add_argument("--n-queries", type=int, default=15, help="number of few-shot queries")
 parser.add_argument("--ncm-loss", action="store_true", help="use ncm output instead of linear")
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
-parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
 
 args = parser.parse_args()
 

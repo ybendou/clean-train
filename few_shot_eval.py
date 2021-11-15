@@ -42,6 +42,32 @@ def ncm(train_features, features, run_classes, run_indices, n_shots):
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
+
+def knn(train_features, features, run_classes, run_indices, n_shots):
+    """
+        Pick the nearest neighbor 
+    """
+    with torch.no_grad():
+        dim = features.shape[2]
+        targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
+        print('features size:', features.size())
+        features = preprocess(train_features, features)
+        scores = []
+        for batch_idx in range(n_runs // batch_few_shot_runs):
+            runs = generate_runs(features, run_classes, run_indices, batch_idx)
+            means = torch.mean(runs[:,:,:n_shots], dim = 2)
+            print('runs before resh:', runs.size())
+            print('runs reshaped:', runs[:,:,n_shots:].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim).size())
+            print('means before resh:', means.size())
+            print('means reshaped:', means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim).size())
+            distances = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim), dim = 4, p = 2)
+            print('distances:', distances.size())
+            winners = torch.min(distances, dim = 2)[1]
+            print('winners :', winners.size())
+            scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
+        return stats(scores, "")
+
+
 def get_features(model, loader):
     model.eval()
     all_features, offset, max_offset = [], 100000, 0
