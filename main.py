@@ -104,7 +104,7 @@ def train(model, train_loader, optimizer, epoch, list_of_superclasses, mixup = F
                 output, output_rot = output
                 loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
             else:
-                loss = 0.
+                loss_marriage, loss_classes = 0., 0.
                 output_classes, output_marriage = output
                 for k in range(args.K):
                     output_k = output_marriage[:,32*k:32*(k+1)]
