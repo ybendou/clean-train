@@ -38,6 +38,7 @@ class ResNet12(nn.Module):
         layers.append(BasicBlockRN12(5 * feature_maps, 10 * feature_maps))        
         self.layers = nn.Sequential(*layers)
         self.linear = linear(10 * feature_maps, (num_classes//2)*args.K)
+        self.linear_classifier = linear(10 * feature_maps, num_classes)
         self.rotations = rotations
         self.linear_rot = nn.Linear(10 * feature_maps, 4)
         self.mp = nn.MaxPool2d((2,2))
@@ -63,7 +64,9 @@ class ResNet12(nn.Module):
             out = self.mp(F.leaky_relu(out, negative_slope = 0.1))
         out = F.avg_pool2d(out, out.shape[2])
         features = out.view(out.size(0), -1)
-        out = self.linear(features)
+        out_marriage = self.linear(features)
+        out_classes = self.linear_classifier(features)
+        out = (out_classes, out_marriage)
         if self.rotations:
             out_rot = self.linear_rot(features)
             return (out, out_rot), features

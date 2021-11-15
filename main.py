@@ -105,16 +105,15 @@ def train(model, train_loader, optimizer, epoch, list_of_superclasses, mixup = F
                 loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
             else:
                 loss = 0.
+                output_classes, output_marriage = output
                 for k in range(args.K):
-                    output_k = output[:,32*k:32*(k+1)]
+                    output_k = output_marriage[:,32*k:32*(k+1)]
                     super_classes_hash = list_of_superclasses[k]
                     new_target = torch.LongTensor([super_classes_hash[t.item()] for t in target]).cuda()
-                    loss += crit(output_k, features, new_target)
-                loss = loss/args.K
-                #new_target = torch.LongTensor([list_of_superclasses[k][t.item()] for k in range(args.K)for t in target]).cuda() 
-                #loss = crit(output, features, new_target)
-
-
+                    loss_marriage += crit(output_k, features, new_target)
+                loss_marriage = loss_marriage/args.K
+                loss_classes = crit(output_classes, features, target)   
+                loss = 0.5 * loss_classes + 0.5 * loss_marriage
 
         # backprop loss
         loss.backward()

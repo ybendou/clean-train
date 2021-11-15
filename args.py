@@ -82,8 +82,6 @@ parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number 
 
 parser.add_argument("--K", type=int, default=3, help="number of combinaison of pairs")
 
-
-
 args = parser.parse_args()
 
 ### process arguments
