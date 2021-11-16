@@ -108,12 +108,12 @@ def train(model, T, L, train_loader, optimizer, epoch, mixup = False, mm = False
             features_preprocessed = T(features_preprocessed) # look for best projection
             features_preprocessed = sphering(features_preprocessed, dim=1) # renormalize by projecting on the sphere again
             output = L(features_preprocessed) # get the ouput
-            output = nn.Softmax(dim=1)(output)
+            #output = nn.Softmax(dim=1)(output)
             if args.rotations:
                 output, output_rot = output
                 loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
             else:
-                loss = crit(output, features, target)
+                loss = crit(output, features_preprocessed, target)
 
         # backprop loss
         loss.backward()
