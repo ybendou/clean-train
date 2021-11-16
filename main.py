@@ -241,16 +241,18 @@ def train_complete(model, T, L, loaders, mixup = False):
                 else:
                     print("test acc: {:.2f}%".format(100 * test_stats["test_acc"]))
 
-    if args.epochs + args.manifold_mixup <= args.skip_epochs:
-        if few_shot:
-            res = few_shot_eval.update_few_shot_meta_data(model, T, L, train_clean, novel_loader, val_loader, few_shot_meta_data)
-        else:
-            test_stats = test(model, test_loader)
+    with torch.no_grad():
+        if args.epochs + args.manifold_mixup <= args.skip_epochs:
+            if few_shot:
+                
+                res = few_shot_eval.update_few_shot_meta_data(model, T, L, train_clean, novel_loader, val_loader, few_shot_meta_data)
+            else:
+                test_stats = test(model, test_loader)
 
-    if few_shot:
-        return few_shot_meta_data
-    else:
-        return test_stats
+        if few_shot:
+            return few_shot_meta_data
+        else:
+            return test_stats
 
 ### process main arguments
 loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset(args.dataset)
