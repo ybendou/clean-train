@@ -46,9 +46,9 @@ if args.wandb:
 last_update, criterion = 0, torch.nn.CrossEntropyLoss()
 
 ### function to either use criterion based on output and target or criterion_episodic based on features and target
-def crit(output, features, target):
+def crit(output, features, target, T=None):
     if args.episodic:
-        return criterion_episodic(features, target)
+        return criterion_episodic(features, target, T=T)
     else:
         return criterion(output, target)
 
@@ -113,7 +113,7 @@ def train(model, T, L, train_loader, optimizer, epoch, mixup = False, mm = False
                 output, output_rot = output
                 loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
             else:
-                loss = crit(output, features_preprocessed, target)
+                loss = crit(output, features_preprocessed, target, T=T)
 
         # backprop loss
         loss.backward()
