@@ -91,11 +91,10 @@ def preprocess(train_features, features, T=None):
             with torch.no_grad():
                 train_features = centering(train_features, train_features)
         if args.preprocessing[i] == 'T':
-            with torch.no_grad():
-                c, s, f = features.shape
-                features = features.reshape(c*s, 1, f)
-                features = T(features) 
-                features = features.reshape(c,s,args.out_maps)
+            c, s, f = features.shape
+            features = features.reshape(c*s, 1, f)
+            features = T(features) 
+            features = features.reshape(c,s,args.out_maps)
     return features
    
 print("utils, ", end='')
