@@ -324,10 +324,15 @@ if args.test_features != "":
 class transform(nn.Module):
     def __init__(self, feature_maps=64, out_maps=640):
         super(transform, self).__init__()
-        self.linear = nn.Linear(10*feature_maps, out_maps, bias=True)
-    
+        self.linear = nn.Linear(10*feature_maps, 5*feature_maps, bias=True)
+        self.relu = nn.ReLU()
+        self.linear2 = nn.Linear(5*feature_maps, out_maps, bias=True)
+        
     def forward(self, x):
-        return self.linear(x)
+        out = self.linear(x)
+        out = self.relu(out)
+        out = self.linear2(out)
+        return out
     
 out_maps = args.out_maps
 
