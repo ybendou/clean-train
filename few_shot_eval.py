@@ -42,6 +42,40 @@ def ncm(train_features, features, run_classes, run_indices, n_shots):
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
+def transductive_ncm(train_features, features, run_classes, run_indices, n_shots, n_iter_trans = args.transductive_n_iter, n_iter_trans_sinkhorn = args.transductive_n_iter_sinkhorn, temp_trans = args.transductive_temperature, alpha_trans = args.transductive_alpha, cosine = args.transductive_cosine):
+    with torch.no_grad():
+        dim = features.shape[2]
+        targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
+        features = preprocess(train_features, features)
+        if cosine:
+            features = features / torch.norm(features, dim = 2, keepdim = True)
+        scores = []
+        for batch_idx in range(n_runs // batch_few_shot_runs):
+            runs = generate_runs(features, run_classes, run_indices, batch_idx)
+            means = torch.mean(runs[:,:,:n_shots], dim = 2)
+            if cosine:
+                means = means / torch.norm(means, dim = 2, keepdim = True)
+            for _ in range(n_iter_trans):
+                if cosine:
+                    similarities = torch.einsum("bswd,bswd->bsw", runs[:,:,n_shots:].reshape(batch_few_shot_runs, -1, 1, dim), means.reshape(batch_few_shot_runs, 1, args.n_ways, dim))
+                    soft_sims = torch.softmax(temp_trans * similarities, dim = 2)
+                else:
+                    similarities = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, -1, 1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, dim), dim = 3, p = 2)
+                    soft_sims = torch.exp( -1 * temp_trans * similarities)
+                for _ in range(n_iter_trans_sinkhorn):
+                    soft_sims = soft_sims / soft_sims.sum(dim = 2, keepdim = True) * args.n_ways
+                    soft_sims = soft_sims / soft_sims.sum(dim = 1, keepdim = True) * args.n_queries
+                new_means = ((runs[:,:,:n_shots].mean(dim = 2) * n_shots + torch.einsum("rsw,rsd->rwd", soft_sims, runs[:,:,n_shots:].reshape(runs.shape[0], -1, runs.shape[3])))) / runs.shape[2]
+                new_means = new_means / torch.norm(new_means, dim = 2, keepdim = True)
+                means = means * alpha_trans + (1 - alpha_trans) * new_means
+                means = means / torch.norm(means, dim = 2, keepdim = True)
+            if cosine:
+                winners = torch.max(similarities.reshape(runs.shape[0], runs.shape[1], runs.shape[2] - n_shots, -1), dim = 3)[1]
+            else:
+                winners = torch.min(similarities.reshape(runs.shape[0], runs.shape[1], runs.shape[2] - n_shots, -1), dim = 3)[1]
+            scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
+        return stats(scores, "")
+
 def ncm_cosine(train_features, features, run_classes, run_indices, n_shots):
     with torch.no_grad():
         dim = features.shape[2]
@@ -72,8 +106,11 @@ def get_features(model, loader):
     print(".", end='')
     return torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
 
-def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots):
-    return ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
+def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False):
+    if transductive:
+        return transductive_ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), transductive_ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
+    else:
+        return ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
 
 def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data):
 
@@ -90,8 +127,8 @@ def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_
 
     return res
 
-def evaluate_shot(index, train_features, val_features, novel_features, few_shot_meta_data, model = None):
-    (val_acc, val_conf), (novel_acc, novel_conf) = eval_few_shot(train_features, val_features, novel_features, few_shot_meta_data["val_run_classes"][index], few_shot_meta_data["val_run_indices"][index], few_shot_meta_data["novel_run_classes"][index], few_shot_meta_data["novel_run_indices"][index], args.n_shots[index])
+def evaluate_shot(index, train_features, val_features, novel_features, few_shot_meta_data, model = None, transductive = False):
+    (val_acc, val_conf), (novel_acc, novel_conf) = eval_few_shot(train_features, val_features, novel_features, few_shot_meta_data["val_run_classes"][index], few_shot_meta_data["val_run_indices"][index], few_shot_meta_data["novel_run_classes"][index], few_shot_meta_data["novel_run_indices"][index], args.n_shots[index], transductive = transductive)
     if val_acc > few_shot_meta_data["best_val_acc"][index]:
         if val_acc > few_shot_meta_data["best_val_acc_ever"][index]:
             few_shot_meta_data["best_val_acc_ever"][index] = val_acc

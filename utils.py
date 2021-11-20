@@ -81,5 +81,21 @@ def preprocess(train_features, features):
             with torch.no_grad():
                 train_features = centering(train_features, train_features)
     return features
-   
+
+class LabelSmoothingLoss(nn.Module):
+    def __init__(self, num_classes, smoothing=0.1):
+        super(LabelSmoothingLoss, self).__init__()
+        self.smoothing = smoothing
+        self.cls = num_classes
+
+    def forward(self, pred, target):
+        assert 0 <= self.smoothing < 1
+        pred = pred.log_softmax(dim=-1)
+
+        with torch.no_grad():
+            true_dist = torch.zeros_like(pred)
+            true_dist.fill_(self.smoothing / (self.cls - 1))
+            true_dist.scatter_(1, target.data.unsqueeze(1), 1 - self.smoothing)
+        return torch.mean(torch.sum(-true_dist * pred, dim=-1))
+
 print("utils, ", end='')

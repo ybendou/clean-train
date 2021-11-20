@@ -31,6 +31,10 @@ def crit(output, features, target):
     if args.episodic:
         return criterion_episodic(features, target)
     else:
+        if args.label_smoothing > 0:
+            criterion = LabelSmoothingLoss(num_classes = num_classes, smoothing = args.label_smoothing)
+        else:
+            criterion = torch.nn.CrossEntropyLoss()
         return criterion(output, target)
 
 ### main train function
@@ -261,9 +265,14 @@ if args.test_features != "":
     train_features = test_features[:num_classes]
     val_features = test_features[num_classes:num_classes + val_classes]
     test_features = test_features[num_classes + val_classes:]
-    for i in range(len(args.n_shots)):
-        val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, test_features, few_shot_meta_data)
-        print("{:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
+    if not args.transductive:
+        for i in range(len(args.n_shots)):
+            val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, test_features, few_shot_meta_data)
+            print("Inductive {:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
+    else:
+        for i in range(len(args.n_shots)):
+            val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, test_features, few_shot_meta_data, transductive = True)
+            print("Transductive {:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
     sys.exit()
 
 for i in range(args.runs):
