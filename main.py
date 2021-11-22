@@ -20,25 +20,12 @@ import wideresnet
 import resnet12
 import s2m2
 import mlp
+import amdimnet
 print("models.")
 
 
 import wandb
 
-wandb.init(project="few-shot", 
-           entity="bendouy", 
-           tags=['Test', args.dataset], 
-           notes=str(vars(args))
-           )
-wandb.config = {
-  "learning_rate": args.lr,
-  "epochs": args.epochs,
-  "batch_size": args.batch_size,
-  "backbone": args.model,
-  "rotations": args.rotations,
-  "mixup": args.mixup,
-  "manifold_mixup":args.manifold_mixup
-}
 
 ### global variables that are used by the train function
 last_update, criterion = 0, torch.nn.CrossEntropyLoss()
@@ -121,8 +108,8 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             else:
                 print("\r{:4d} loss: {:.5f} ".format(epoch, losses / total), end = '')
             last_update = time.time()
-    
-    wandb.log({"epoch":epoch, "train_loss": losses / total})
+    if args.wandb:
+        wandb.log({"epoch":epoch, "train_loss": losses / total})
 
     # return train_loss
     return { "train_loss" : losses / total}
@@ -153,8 +140,8 @@ def test(model, test_loader):
 
     # return results
     model.train()
-
-    wandb.log({ "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total})
+    if args.wandb:
+        wandb.log({ "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total})
 
     return { "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total}
 
@@ -200,7 +187,8 @@ def train_complete(model, loaders, mixup = False):
                 res = few_shot_eval.update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data)
                 for i in range(len(args.n_shots)):
                     print("val-{:d}: {:.2f}%, nov-{:d}: {:.2f}% ({:.2f}%) ".format(args.n_shots[i], 100 * res[i][0], args.n_shots[i], 100 * res[i][2], 100 * few_shot_meta_data["best_novel_acc"][i]), end = '')
-                    wandb.log({'epoch':epoch, f'val-{args.n_shots[i]}':res[i][0], f'nov-{args.n_shots[i]}':res[i][2]})
+                    if args.wandb:
+                        wandb.log({'epoch':epoch, f'val-{args.n_shots[i]}':res[i][0], f'nov-{args.n_shots[i]}':res[i][2]})
 
                 print()
             else:
@@ -277,7 +265,8 @@ def create_model():
         return mlp.MLP(args.feature_maps, int(args.model[3:]), input_shape, num_classes, args.rotations, few_shot).to(args.device)
     if args.model.lower() == "s2m2r":
         return s2m2.S2M2R(args.feature_maps, input_shape, args.rotations, num_classes = num_classes).to(args.device)
-
+    if args.model.lower() == "amdimnet":
+        return amdimnet.AmdimNet(ndf=192, n_rkhs=1536, n_depth=8).to(args.device)
 if args.test_features != "":
     test_features = torch.load(args.test_features).to(args.dataset_device)
     print("Testing features of shape", test_features.shape)
@@ -293,13 +282,28 @@ for i in range(args.runs):
 
     if not args.quiet:
         print(args)
-    
-    wandb.log({"run": i})
+        
+    if args.wandb:
+        wandb.init(project="few-shot", 
+                entity="bendouy", 
+                tags=[f'run_{i}', args.dataset], 
+                notes=str(vars(args))
+                )
     model = create_model()
 
     if args.load_model != "":
-        model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
-        model.to(args.device)
+        if args.model.lower()=="amdimnet":
+            model_detail = torch.load(args.load_model, map_location=torch.device(args.device))
+            model_dict = model.state_dict()
+            pretrained_dict = model_detail['model']
+            pretrained_dict = {k.replace('module.', ''): v for k, v in pretrained_dict.items() if k.replace('module.', '') in model_dict}
+            model_dict.update(pretrained_dict)
+            model.load_state_dict(model_dict)
+            model.to(args.device)
+
+        else:
+            model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
+            model.to(args.device)
 
     if len(args.devices) > 1:
         model = torch.nn.DataParallel(model, device_ids = args.devices)
@@ -328,7 +332,8 @@ for i in range(args.runs):
     if few_shot:
         for index in range(len(args.n_shots)):
             stats(np.array(run_stats["best_novel_acc"])[:,index], "{:d}-shot".format(args.n_shots[index]))
-            wandb.log({"run": i+1,"test acc {:d}-shot".format(args.n_shots[index]):np.mean(np.array(run_stats["best_novel_acc"])[:,index])})
+            if args.wandb:
+                wandb.log({"run": i+1,"test acc {:d}-shot".format(args.n_shots[index]):np.mean(np.array(run_stats["best_novel_acc"])[:,index])})
     else:
         stats(run_stats["test_acc"], "Top-1")
         if top_5:
