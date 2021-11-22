@@ -38,15 +38,10 @@ def stats(scores, name):
 class ncm_output(nn.Module):
     def __init__(self, indim, outdim):
         super(ncm_output, self).__init__()
-        self.linear = nn.Linear(indim, outdim, bias = False)
-        with torch.no_grad():
-            self.linear.weight.data = self.linear.weight.data / torch.norm(self.linear.weight.data, dim = 1, p = 2, keepdim = True) * torch.mean(torch.norm(self.linear.weight.data, dim = 1, p = 2))
-        self.linear = nn.utils.weight_norm(self.linear)
-        self.temp = nn.Parameter(torch.zeros(1) - 1)
+        self.linear = nn.Linear(indim, outdim)
 
     def forward(self, x):
-        x = x / torch.norm(x + 1e-6, dim = 1, p = 2, keepdim = True)
-        return torch.norm(x.reshape(x.shape[0], 1, -1) - self.linear.weight_v.transpose(0,1).reshape(1, -1, x.shape[1]), dim = 2).pow(2) / self.temp
+        return -1 * torch.norm(x.reshape(x.shape[0], 1, -1) - self.linear.weight.transpose(0,1).reshape(1, -1, x.shape[1]), dim = 2).pow(2) - self.linear.bias
 
 def linear(indim, outdim):
     if args.ncm_loss:
@@ -86,5 +81,21 @@ def preprocess(train_features, features):
             with torch.no_grad():
                 train_features = centering(train_features, train_features)
     return features
-   
+
+class LabelSmoothingLoss(nn.Module):
+    def __init__(self, num_classes, smoothing=0.1):
+        super(LabelSmoothingLoss, self).__init__()
+        self.smoothing = smoothing
+        self.cls = num_classes
+
+    def forward(self, pred, target):
+        assert 0 <= self.smoothing < 1
+        pred = pred.log_softmax(dim=-1)
+
+        with torch.no_grad():
+            true_dist = torch.zeros_like(pred)
+            true_dist.fill_(self.smoothing / (self.cls - 1))
+            true_dist.scatter_(1, target.data.unsqueeze(1), 1 - self.smoothing)
+        return torch.mean(torch.sum(-true_dist * pred, dim=-1))
+
 print("utils, ", end='')

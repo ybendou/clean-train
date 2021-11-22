@@ -43,6 +43,7 @@ parser.add_argument("--milestones", type=str, default="100", help="milestones fo
 parser.add_argument("--gamma", type=float, default=-1., help="multiplier for lr at milestones")
 parser.add_argument("--cosine", action="store_true", help="use cosine annealing scheduler with args.milestones as T_max")
 parser.add_argument("--mixup", action="store_true", help="use of mixup since beginning")
+parser.add_argument("--label-smoothing", type=float, default=0, help="use label smoothing with this value")
 parser.add_argument("--dropout", type=float, default=0, help="use dropout")
 parser.add_argument("--rotations", action="store_true", help="use of rotations self-supervision during training")
 parser.add_argument("--model", type=str, default="ResNet18", help="model to train")
@@ -79,6 +80,14 @@ parser.add_argument("--n-queries", type=int, default=15, help="number of few-sho
 parser.add_argument("--ncm-loss", action="store_true", help="use ncm output instead of linear")
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
+# only for transductive, used with "test-features"
+parser.add_argument("--transductive", action="store_true", help ="test features in transductive setting")
+parser.add_argument("--transductive-n-iter", type=int, default=50, help="number of iterations for few-shot transductive")
+parser.add_argument("--transductive-n-iter-sinkhorn", type=int, default=200, help="number of iterations of sinkhorn for few-shot transductive")
+parser.add_argument("--transductive-temperature", type=float, default=14, help="temperature for few-shot transductive")
+parser.add_argument("--transductive-alpha", type=float, default=0.84, help="momentum for few-shot transductive")
+parser.add_argument("--transductive-cosine", action="store_true", help="use cosine similarity for few-shot evaluation")
+
 
 args = parser.parse_args()
 
