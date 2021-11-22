@@ -68,7 +68,7 @@ def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_
     val_features = get_features(model, val_loader)
     novel_features = get_features(model, novel_loader)
 
-    features = torch.concat([train_features, val_features, novel_features])
+    features = torch.cat([train_features, val_features, novel_features])
     torch.save(features, arsg.save_features)
 
 

@@ -300,6 +300,7 @@ for i in range(args.runs):
             model_dict.update(pretrained_dict)
             model.load_state_dict(model_dict)
             model.to(args.device)
+            print('weights loaded')
 
         else:
             model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
