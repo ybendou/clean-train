@@ -322,7 +322,7 @@ def miniImageNet(use_hd = True):
         #norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
         norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
         train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
-        all_transforms = torch.nn.Sequential(transforms.Resize(146, interpolation=INTERP), transforms.CenterCrop(128), transforms.ToTensor(), norm)
+        all_transforms = torch.nn.Sequential(transforms.Resize(146, interpolation=3), transforms.CenterCrop(128), transforms.ToTensor(), norm)
         if args.episodic:
             train_loader = episodic_iterator(datasets["train"][0], 64, transforms = train_transforms, forcecpu = True, use_hd = True)
         else:
