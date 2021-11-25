@@ -75,11 +75,14 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             data[3*bs:] = data[3*bs:].transpose(3,2).flip(2)
             target_rot[3*bs:] = 3
 
-        if mixup: # classical mixup
+        if mixup and args.mm: # mixup or manifold_mixup
             index_mixup = torch.randperm(data.shape[0])
-            lam = random.random()
-            data_mixed = lam * data + (1 - lam) * data[index_mixup]
-            output, features = model(data_mixed)
+            lam = random.random()            
+            if args.mm:
+                output, features = model(data, index_mixup = index_mixup, lam = lam)
+            else:
+                data_mixed = lam * data + (1 - lam) * data[index_mixup]
+                output, features = model(data_mixed)
             if args.rotations:
                 output, output_rot = output
                 loss = ((lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])) + (lam * crit(output_rot, features, target_rot) + (1 - lam) * crit(output_rot, features, target_rot[index_mixup]))) / 2

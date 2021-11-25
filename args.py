@@ -43,6 +43,7 @@ parser.add_argument("--milestones", type=str, default="100", help="milestones fo
 parser.add_argument("--gamma", type=float, default=-1., help="multiplier for lr at milestones")
 parser.add_argument("--cosine", action="store_true", help="use cosine annealing scheduler with args.milestones as T_max")
 parser.add_argument("--mixup", action="store_true", help="use of mixup since beginning")
+parser.add_argument("--mm", action="store_true", help="to be used in combination with mixup only: use manifold_mixup instead of classical mixup")
 parser.add_argument("--label-smoothing", type=float, default=0, help="use label smoothing with this value")
 parser.add_argument("--dropout", type=float, default=0, help="use dropout")
 parser.add_argument("--rotations", action="store_true", help="use of rotations self-supervision during training")
@@ -127,5 +128,8 @@ if args.gamma == -1:
         args.gamma = 1.
     else:
         args.gamma = 0.1
+
+if args.mm:
+    args.mixup = True
     
 print("args, ", end='')
