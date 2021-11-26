@@ -441,23 +441,23 @@ def miniImageNet84():
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 def get_dataset(dataset_name):
-    if args.dataset.lower() == "cifar10":
+    if dataset_name.lower() == "cifar10":
         return cifar10(data_augmentation = True)
-    elif args.dataset.lower() == "cifar100":
+    elif dataset_name.lower() == "cifar100":
         return cifar100(data_augmentation = True)
-    elif args.dataset.lower() == "cifarfs":
+    elif dataset_name.lower() == "cifarfs":
         return cifarfs(data_augmentation = True)
-    elif args.dataset.lower() == "mnist":
+    elif dataset_name.lower() == "mnist":
         return mnist()
-    elif args.dataset.lower() == "fashion":
+    elif dataset_name.lower() == "fashion":
         return fashion_mnist()
-    elif args.dataset.lower() == "miniimagenet":
+    elif dataset_name.lower() == "miniimagenet":
         return miniImageNet()
-    elif args.dataset.lower() == "miniimagenet84":
+    elif dataset_name.lower() == "miniimagenet84":
         return miniImageNet84()
-    elif args.dataset.lower() == "cubfs":
+    elif dataset_name.lower() == "cubfs":
         return CUBfs()
-    elif args.dataset.lower() == "omniglotfs":
+    elif dataset_name.lower() == "omniglotfs":
         return omniglotfs()
     else:
         print("Unknown dataset!")

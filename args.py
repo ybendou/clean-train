@@ -43,6 +43,7 @@ parser.add_argument("--milestones", type=str, default="100", help="milestones fo
 parser.add_argument("--gamma", type=float, default=-1., help="multiplier for lr at milestones")
 parser.add_argument("--cosine", action="store_true", help="use cosine annealing scheduler with args.milestones as T_max")
 parser.add_argument("--mixup", action="store_true", help="use of mixup since beginning")
+parser.add_argument("--mm", action="store_true", help="to be used in combination with mixup only: use manifold_mixup instead of classical mixup")
 parser.add_argument("--label-smoothing", type=float, default=0, help="use label smoothing with this value")
 parser.add_argument("--dropout", type=float, default=0, help="use dropout")
 parser.add_argument("--rotations", action="store_true", help="use of rotations self-supervision during training")
@@ -50,7 +51,7 @@ parser.add_argument("--model", type=str, default="ResNet18", help="model to trai
 parser.add_argument("--preprocessing", type=str, default="", help="preprocessing sequence for few shot, can contain R:relu P:sqrt E:sphering and M:centering")
 parser.add_argument("--manifold-mixup", type=int, default="0", help="deploy manifold mixup as fine-tuning as in S2M2R for the given number of epochs")
 parser.add_argument("--temperature", type=float, default=1., help="multiplication factor before softmax when using episodic")
-
+parser.add_argument("--ema", type=float, default=0, help="use exponential moving average with specified decay (default, 0 which means do not use)")
 
 ### pytorch options
 parser.add_argument("--device", type=str, default="cuda:0", help="device(s) to use, for multiple GPUs try cuda:ijk, will not work with 10+ GPUs")
@@ -88,8 +89,11 @@ parser.add_argument("--transductive-temperature", type=float, default=14, help="
 parser.add_argument("--transductive-alpha", type=float, default=0.84, help="momentum for few-shot transductive")
 parser.add_argument("--transductive-cosine", action="store_true", help="use cosine similarity for few-shot evaluation")
 
-
-args = parser.parse_args()
+try :
+    get_ipython()
+    args = parser.parse_args(args=[])
+except :
+    args = parser.parse_args()
 
 ### process arguments
 if args.dataset_device == "":
@@ -128,5 +132,8 @@ if args.gamma == -1:
         args.gamma = 1.
     else:
         args.gamma = 0.1
+
+if args.mm:
+    args.mixup = True
     
 print("args, ", end='')
