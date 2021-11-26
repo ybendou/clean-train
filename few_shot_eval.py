@@ -30,16 +30,30 @@ def generate_runs(data, run_classes, run_indices, batch_idx):
 
 def ncm(train_features, features, run_classes, run_indices, n_shots):
     with torch.no_grad():
-        dim = train_features.shape[2]
+        dim = features.shape[2] if args.n_augmentation == 0 else features['normal'].shape[2]
         targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
         features = preprocess(train_features, features)
         scores = []
         for batch_idx in range(n_runs // batch_few_shot_runs):
-            runs = generate_runs(features, run_classes, run_indices, batch_idx)
-            means = torch.mean(runs[:,:,:n_shots], dim = 2)
-            distances = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim), dim = 4, p = 2)
+            if args.n_augmentation == 0:
+                runs = generate_runs(features, run_classes, run_indices, batch_idx)
+                means = torch.mean(runs[:,:,:n_shots], dim = 2)
+                distances = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim), dim = 4, p = 2)
+            else:
+                all_runs = {k:generate_runs(feats, run_classes, run_indices, batch_idx)[:,:,:n_shots] for k,feats in features.items() if k!='normal'}
+                all_runs['normal'] = generate_runs(features['normal'], run_classes, run_indices, batch_idx)
+                support_feats = torch.cat([run[:,:,:n_shots] for run in all_runs.values()], axis=2)
+
+                runs = torch.zeros(batch_few_shot_runs, args.n_ways, n_shots*(args.n_augmentation+1)+args.n_queries, dim).to(args.device)
+                runs[:,:,n_shots*(args.n_augmentation+1):]=all_runs['normal'][:,:,n_shots:]
+                runs[:,:,:n_shots*(args.n_augmentation+1)]=support_feats
+                
+                means = torch.mean(runs[:,:,:n_shots*(args.n_augmentation+1)], dim = 2)
+                distances = torch.norm(runs[:,:,n_shots*(args.n_augmentation+1):].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim), dim = 4, p = 2)
+
             winners = torch.min(distances, dim = 2)[1]
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
+
         return stats(scores, "")
 
 def transductive_ncm(train_features, features, run_classes, run_indices, n_shots, n_iter_trans = args.transductive_n_iter, n_iter_trans_sinkhorn = args.transductive_n_iter_sinkhorn, temp_trans = args.transductive_temperature, alpha_trans = args.transductive_alpha, cosine = args.transductive_cosine):
@@ -101,9 +115,11 @@ def get_features(model, loader, dataset='train'):
     if args.n_augmentation==0 or dataset=='train':
         return get_features_(model, loader)
     else:
-        augmented_features = {}
+        normal_loader, augmented_loader = loader
+        augmented_features = {'normal':get_features_(model, normal_loader)}
+        
         for n in range(args.n_augmentation):
-            augmented_features[n]=get_features_(model, loader)
+            augmented_features[f'augmented_{n}']=get_features_(model, augmented_loader)
         return augmented_features
 
 def get_features_(model, loader):
@@ -125,6 +141,8 @@ def eval_few_shot(train_features, val_features, novel_features, val_run_classes,
         return transductive_ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), transductive_ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
     else:
         return ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
+        #return (0.0, 0.0), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
+
 
 def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data):
 
