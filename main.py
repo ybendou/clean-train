@@ -224,7 +224,7 @@ def train_complete(model, loaders, mixup = False):
         return test_stats
 
 ### process main arguments
-loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset()
+loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset(args.dataset)
 ### initialize few-shot meta data
 if few_shot:
     num_classes, val_classes, novel_classes, elements_per_class = num_classes
