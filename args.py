@@ -51,7 +51,7 @@ parser.add_argument("--model", type=str, default="ResNet18", help="model to trai
 parser.add_argument("--preprocessing", type=str, default="", help="preprocessing sequence for few shot, can contain R:relu P:sqrt E:sphering and M:centering")
 parser.add_argument("--manifold-mixup", type=int, default="0", help="deploy manifold mixup as fine-tuning as in S2M2R for the given number of epochs")
 parser.add_argument("--temperature", type=float, default=1., help="multiplication factor before softmax when using episodic")
-
+parser.add_argument("--ema", type=float, default=0, help="use exponential moving average with specified decay (default, 0 which means do not use)")
 
 ### pytorch options
 parser.add_argument("--device", type=str, default="cuda:0", help="device(s) to use, for multiple GPUs try cuda:ijk, will not work with 10+ GPUs")
@@ -88,8 +88,11 @@ parser.add_argument("--transductive-temperature", type=float, default=14, help="
 parser.add_argument("--transductive-alpha", type=float, default=0.84, help="momentum for few-shot transductive")
 parser.add_argument("--transductive-cosine", action="store_true", help="use cosine similarity for few-shot evaluation")
 
-
-args = parser.parse_args()
+try :
+    get_ipython()
+    args = parser.parse_args(args=[])
+except :
+    args = parser.parse_args()
 
 ### process arguments
 if args.dataset_device == "":

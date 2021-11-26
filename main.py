@@ -21,6 +21,8 @@ import resnet12
 import s2m2
 import mlp
 print("models.")
+if args.ema > 0:
+    from torch_ema import ExponentialMovingAverage
 
 
 ### global variables that are used by the train function
@@ -104,6 +106,8 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
 
         # update parameters
         optimizer.step()
+        if args.ema > 0:
+            ema.update()
 
         # print advances if at least 100ms have passed since last print
         if (batch_idx + 1 == len(train_loader)) or (time.time() - last_update > 0.1) and not args.quiet:
@@ -122,6 +126,9 @@ def test(model, test_loader):
     test_loss, accuracy, accuracy_top_5, total = 0, 0, 0, 0
     
     with torch.no_grad():
+        if args.ema > 0:
+            ema.store()
+            ema.copy_to()
         for data, target in test_loader:
             data, target = data.to(args.device), target.to(args.device)
             output, _ = model(data)
@@ -139,7 +146,8 @@ def test(model, test_loader):
                         accuracy_top_5 += 1
             # count total number of samples for averaging in the end
             total += target.shape[0]
-
+        if args.ema > 0:
+            ema.restore()
     # return results
     model.train()
     return { "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total}
@@ -183,7 +191,12 @@ def train_complete(model, loaders, mixup = False):
         
         if (epoch + 1) > args.skip_epochs:
             if few_shot:
+                if args.ema > 0:
+                    ema.store()
+                    ema.copy_to()
                 res = few_shot_eval.update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data)
+                if args.ema > 0:
+                    ema.restore()
                 for i in range(len(args.n_shots)):
                     print("val-{:d}: {:.2f}%, nov-{:d}: {:.2f}% ({:.2f}%) ".format(args.n_shots[i], 100 * res[i][0], args.n_shots[i], 100 * res[i][2], 100 * few_shot_meta_data["best_novel_acc"][i]), end = '')
                 print()
@@ -196,7 +209,12 @@ def train_complete(model, loaders, mixup = False):
 
     if args.epochs + args.manifold_mixup <= args.skip_epochs:
         if few_shot:
+            if args.ema > 0:
+                ema.store()
+                ema.copy_to()
             res = few_shot_eval.update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data)
+            if args.ema > 0:
+                ema.restore()
         else:
             test_stats = test(model, test_loader)
 
@@ -284,6 +302,8 @@ for i in range(args.runs):
         print(args)
         
     model = create_model()
+    if args.ema > 0:
+        ema = ExponentialMovingAverage(model.parameters(), decay=args.ema)
 
     if args.load_model != "":
         model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
