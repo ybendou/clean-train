@@ -63,6 +63,13 @@ def centering(train_features, features):
     return features - train_features.reshape(-1, train_features.shape[2]).mean(dim = 0).unsqueeze(0).unsqueeze(0)
 
 def preprocess(train_features, features):
+    if args.n_augmentation==0:
+        return preprocess_(train_features, features)
+    else:
+        return {n:preprocess_(train_features, feat) for n,feat in features.items()}
+        
+
+def preprocess_(train_features, features):
     for i in range(len(args.preprocessing)):
         if args.preprocessing[i] == 'R':
             with torch.no_grad():

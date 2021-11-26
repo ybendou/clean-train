@@ -81,6 +81,9 @@ parser.add_argument("--n-queries", type=int, default=15, help="number of few-sho
 parser.add_argument("--ncm-loss", action="store_true", help="use ncm output instead of linear")
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
+parser.add_argument("--n-augmentation", type=int, default=0, help="use dataAugmentation")
+
+
 # only for transductive, used with "test-features"
 parser.add_argument("--transductive", action="store_true", help ="test features in transductive setting")
 parser.add_argument("--transductive-n-iter", type=int, default=50, help="number of iterations for few-shot transductive")

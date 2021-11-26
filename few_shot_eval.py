@@ -30,7 +30,7 @@ def generate_runs(data, run_classes, run_indices, batch_idx):
 
 def ncm(train_features, features, run_classes, run_indices, n_shots):
     with torch.no_grad():
-        dim = features.shape[2]
+        dim = train_features.shape[2]
         targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
         features = preprocess(train_features, features)
         scores = []
@@ -92,7 +92,21 @@ def ncm_cosine(train_features, features, run_classes, run_indices, n_shots):
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
-def get_features(model, loader):
+
+def get_features(model, loader, dataset='train'):
+    """
+        Get features depending if data augmentation is enabled
+        If data aug enabled, the data loader for val and novel is randomly augmenting images
+    """
+    if args.n_augmentation==0 or dataset=='train':
+        return get_features_(model, loader)
+    else:
+        augmented_features = {}
+        for n in range(args.n_augmentation):
+            augmented_features[n]=get_features_(model, loader)
+        return augmented_features
+
+def get_features_(model, loader):
     model.eval()
     all_features, offset, max_offset = [], 100000, 0
     for batch_idx, (data, target) in enumerate(loader):        
@@ -115,11 +129,11 @@ def eval_few_shot(train_features, val_features, novel_features, val_run_classes,
 def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data):
 
     if "M" in args.preprocessing or args.save_features != '':
-        train_features = get_features(model, train_clean)
+        train_features = get_features(model, train_clean, dataset='train')
     else:
         train_features = torch.Tensor(0,0,0)
-    val_features = get_features(model, val_loader)
-    novel_features = get_features(model, novel_loader)
+    val_features = get_features(model, val_loader, dataset='val')
+    novel_features = get_features(model, novel_loader, dataset='novel')
 
     res = []
     for i in range(len(args.n_shots)):

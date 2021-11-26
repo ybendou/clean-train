@@ -324,8 +324,13 @@ def miniImageNet(use_hd = True):
     else:
         train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
     train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    
+    if args.n_augmentation >0:
+        few_shot_loader = torch.nn.Sequential(transforms.RandomResizedCrop(84), norm) 
+    
+    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms if args.n_augmentation==0 else few_shot_loader, forcecpu = True, shuffle = False, use_hd = use_hd)
+    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms if args.n_augmentation==0 else few_shot_loader, forcecpu = True, shuffle = False, use_hd = use_hd)
+
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 import pickle
