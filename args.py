@@ -82,6 +82,7 @@ parser.add_argument("--ncm-loss", action="store_true", help="use ncm output inst
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
 parser.add_argument("--n-augmentation", type=int, default=0, help="use dataAugmentation")
+parser.add_argument("--augmentations", type=str, default="crop", help="choose augmentations")
 
 
 # only for transductive, used with "test-features"
@@ -129,6 +130,9 @@ except:
     args.milestones = eval(args.milestones)
 if args.milestones == [] and args.cosine:
     args.milestones = [args.epochs + args.manifold_mixup]
+
+
+args.augmentations = args.augmentations.split(',')
 
 if args.gamma == -1:
     if args.cosine:
