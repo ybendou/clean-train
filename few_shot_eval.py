@@ -44,16 +44,33 @@ def ncm(train_features, features, run_classes, run_indices, n_shots):
                 all_runs['normal'] = generate_runs(features['normal'], run_classes, run_indices, batch_idx)
                 support_feats = torch.cat([run[:,:,:n_shots] for run in all_runs.values()], axis=2)
 
-                runs = torch.zeros(batch_few_shot_runs, args.n_ways, n_shots*(args.n_augmentation+1)+args.n_queries, dim).to(args.device)
-                runs[:,:,n_shots*(args.n_augmentation+1):]=all_runs['normal'][:,:,n_shots:]
-                runs[:,:,:n_shots*(args.n_augmentation+1)]=support_feats
-                
-                means = torch.mean(runs[:,:,:n_shots*(args.n_augmentation+1)], dim = 2)
-                distances = torch.norm(runs[:,:,n_shots*(args.n_augmentation+1):].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim), dim = 4, p = 2)
+                if args.augmentation_best_select and n_shots>1: # select best crops based on their distance to the 
+                    # support_feats get centroid : 
+                    centroid = torch.mean(all_runs['normal'][:,:,:n_shots], dim = 2).reshape(batch_few_shot_runs, args.n_ways, 1, dim)
+                    centroid = centroid/torch.norm(centroid, dim = 2, keepdim=True) # re-project on the sphere
+
+                    cos = torch.nn.CosineSimilarity(dim=3)
+
+                    support_feats_augmented = torch.cat([run[:,:,:n_shots] for k,run in all_runs.items() if k!='normal'], axis=2).reshape(batch_few_shot_runs, args.n_ways, -1, dim) # support features, only the augmented ones (crops)
+                    cosine_distances = cos(support_feats_augmented, centroid) # cosine distance from centroid
+                    threshold = cosine_distances.mean()-2*cosine_distances.std() # threshold from centroid (1std from mean)
+                    #print(f'cosine mean: {cosine_distances.mean()}, std: {cosine_distances.std()}, threshold:{threshold}')
+                    filtered_support_feats_aug = (support_feats_augmented*(cosine_distances>=threshold).reshape(batch_few_shot_runs, args.n_ways, args.n_augmentation*n_shots, 1).int()) # get the close crops to the centroid, the other ones have zero features
+                    filtered_support_feats = torch.cat([all_runs['normal'][:,:,:n_shots], filtered_support_feats_aug], axis=2) # add the original images, maybe later include the normal ones in the threshold
+                    means = (filtered_support_feats.sum(axis=2)/(n_shots+(cosine_distances>=threshold).reshape(batch_few_shot_runs, args.n_ways, args.n_augmentation*n_shots, 1).int().sum(axis=2))) # get the new mean by considering 
+                    distances = torch.norm(all_runs['normal'][:,:,n_shots:].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim), dim = 4, p = 2) # compute the new distances
+
+                else:
+                    runs = torch.zeros(batch_few_shot_runs, args.n_ways, n_shots*(args.n_augmentation+1)+args.n_queries, dim).to(args.device)
+                    runs[:,:,n_shots*(args.n_augmentation+1):]=all_runs['normal'][:,:,n_shots:]
+                    runs[:,:,:n_shots*(args.n_augmentation+1)]=support_feats
+                    means = torch.mean(runs[:,:,:n_shots*(args.n_augmentation+1)], dim = 2)
+                    distances = torch.norm(runs[:,:,n_shots*(args.n_augmentation+1):].reshape(batch_few_shot_runs, args.n_ways, 1, -1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, 1, dim), dim = 4, p = 2)
 
             winners = torch.min(distances, dim = 2)[1]
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
-
+        if args.augmentation_best_select and n_shots>1:
+            print(f'cosine mean: {cosine_distances.mean()}, std: {cosine_distances.std()}, threshold:{threshold}')
         return stats(scores, "")
 
 def transductive_ncm(train_features, features, run_classes, run_indices, n_shots, n_iter_trans = args.transductive_n_iter, n_iter_trans_sinkhorn = args.transductive_n_iter_sinkhorn, temp_trans = args.transductive_temperature, alpha_trans = args.transductive_alpha, cosine = args.transductive_cosine):
@@ -120,6 +137,9 @@ def get_features(model, loader, dataset='train'):
         
         for n in range(args.n_augmentation):
             augmented_features[f'augmented_{n}']=get_features_(model, augmented_loader)
+        if args.save_augmented_features != "" and dataset=='novel':
+            torch.save(augmented_features, args.save_augmented_features)
+            
         return augmented_features
 
 def get_features_(model, loader):
@@ -128,6 +148,8 @@ def get_features_(model, loader):
     for batch_idx, (data, target) in enumerate(loader):        
         with torch.no_grad():
             data, target = data.to(args.device), target.to(args.device)
+            if args.save_images != '':
+                torch.save({'target':target, 'data':data}, f'{args.save_images}_{batch_idx}')
             _, features = model(data)
             all_features.append(features)
             offset = min(min(target), offset)

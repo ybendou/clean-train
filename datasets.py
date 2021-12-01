@@ -331,7 +331,7 @@ def miniImageNet(use_hd = True):
         augmentations = []
         for augment in args.augmentations:
             if augment=='crop':
-                augmentations.append(transforms.RandomResizedCrop(84, scale=(0.5,1.0)))
+                augmentations.append(transforms.RandomResizedCrop(84, scale=(0.2,0.5)))
                 print('Random Cropping')
             if augment=='rotate':
                 augmentations.append(transforms.RandomRotation((-90,90)))

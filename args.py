@@ -83,7 +83,9 @@ parser.add_argument("--episodic", action="store_true", help="use episodic traini
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
 parser.add_argument("--n-augmentation", type=int, default=0, help="use dataAugmentation")
 parser.add_argument("--augmentations", type=str, default="crop", help="choose augmentations")
-
+parser.add_argument("--augmentation-best-select", type=bool, default=False, help="only pick augmentations which are close to the centroid")
+parser.add_argument("--save-augmented-features", type=str, default="", help="file where to save the augmented features")
+parser.add_argument("--save-images", type=str, default="", help="file where to save the augmented images")
 
 # only for transductive, used with "test-features"
 parser.add_argument("--transductive", action="store_true", help ="test features in transductive setting")
