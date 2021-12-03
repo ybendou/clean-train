@@ -25,6 +25,10 @@ if args.ema > 0:
     from torch_ema import ExponentialMovingAverage
 
 
+import wandb
+
+
+
 ### global variables that are used by the train function
 last_update, criterion = 0, torch.nn.CrossEntropyLoss()
 
@@ -103,7 +107,6 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             
         losses += loss.item() * data.shape[0]
         total += data.shape[0]
-
         # update parameters
         optimizer.step()
         if args.ema > 0:
@@ -116,6 +119,9 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
             else:
                 print("\r{:4d} loss: {:.5f} ".format(epoch, losses / total), end = '')
             last_update = time.time()
+    
+    if args.wandb:
+        wandb.log({"epoch":epoch, "train_loss": losses / total})
 
     # return train_loss
     return { "train_loss" : losses / total}
@@ -150,6 +156,10 @@ def test(model, test_loader):
             ema.restore()
     # return results
     model.train()
+    
+    if args.wandb:
+        wandb.log({ "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total})
+
     return { "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total}
 
 # function to train a model using args.epochs epochs
@@ -199,6 +209,9 @@ def train_complete(model, loaders, mixup = False):
                     ema.restore()
                 for i in range(len(args.n_shots)):
                     print("val-{:d}: {:.2f}%, nov-{:d}: {:.2f}% ({:.2f}%) ".format(args.n_shots[i], 100 * res[i][0], args.n_shots[i], 100 * res[i][2], 100 * few_shot_meta_data["best_novel_acc"][i]), end = '')
+                    if args.wandb:
+                        wandb.log({'epoch':epoch, f'val-{args.n_shots[i]}':res[i][0], f'nov-{args.n_shots[i]}':res[i][2]})
+
                 print()
             else:
                 test_stats = test(model, test_loader)
@@ -300,7 +313,13 @@ for i in range(args.runs):
 
     if not args.quiet:
         print(args)
-        
+    if args.wandb:
+        wandb.init(project="few-shot", 
+            entity="bendouy", 
+            tags=[f'run_{i}', args.dataset], 
+            notes=str(vars(args))
+            )
+        wandb.log({"run": i})
     model = create_model()
     if args.ema > 0:
         ema = ExponentialMovingAverage(model.parameters(), decay=args.ema)
@@ -336,6 +355,8 @@ for i in range(args.runs):
     if few_shot:
         for index in range(len(args.n_shots)):
             stats(np.array(run_stats["best_novel_acc"])[:,index], "{:d}-shot".format(args.n_shots[index]))
+            if args.wandb:
+                wandb.log({"run": i+1,"test acc {:d}-shot".format(args.n_shots[index]):np.mean(np.array(run_stats["best_novel_acc"])[:,index])})
     else:
         stats(run_stats["test_acc"], "Top-1")
         if top_5:
