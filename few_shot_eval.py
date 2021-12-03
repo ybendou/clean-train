@@ -94,7 +94,7 @@ def ncm_cosine(train_features, features, run_classes, run_indices, n_shots):
 
 def get_features(model, loader):
     model.eval()
-    all_features, offset, max_offset = [], 100000, 0
+    all_features, offset, max_offset = [], 1000000, 0
     for batch_idx, (data, target) in enumerate(loader):        
         with torch.no_grad():
             data, target = data.to(args.device), target.to(args.device)
