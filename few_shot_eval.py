@@ -54,7 +54,6 @@ def ncm(train_features, features, run_classes, run_indices, n_shots):
                     support_feats_augmented = torch.cat([run[:,:,:n_shots] for k,run in all_runs.items() if k!='normal'], axis=2).reshape(batch_few_shot_runs, args.n_ways, -1, dim) # support features, only the augmented ones (crops)
                     cosine_distances = cos(support_feats_augmented, centroid) # cosine distance from centroid
                     threshold = cosine_distances.mean()-2*cosine_distances.std() # threshold from centroid (1std from mean)
-                    #print(f'cosine mean: {cosine_distances.mean()}, std: {cosine_distances.std()}, threshold:{threshold}')
                     filtered_support_feats_aug = (support_feats_augmented*(cosine_distances>=threshold).reshape(batch_few_shot_runs, args.n_ways, args.n_augmentation*n_shots, 1).int()) # get the close crops to the centroid, the other ones have zero features
                     filtered_support_feats = torch.cat([all_runs['normal'][:,:,:n_shots], filtered_support_feats_aug], axis=2) # add the original images, maybe later include the normal ones in the threshold
                     means = (filtered_support_feats.sum(axis=2)/(n_shots+(cosine_distances>=threshold).reshape(batch_few_shot_runs, args.n_ways, args.n_augmentation*n_shots, 1).int().sum(axis=2))) # get the new mean by considering 
@@ -123,33 +122,46 @@ def ncm_cosine(train_features, features, run_classes, run_indices, n_shots):
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
+import os
 
 def get_features(model, loader, dataset='train'):
     """
         Get features depending if data augmentation is enabled
         If data aug enabled, the data loader for val and novel is randomly augmenting images
     """
-    if args.n_augmentation==0 or dataset=='train':
-        return get_features_(model, loader)
-    else:
+   
+    if args.n_augmentation>0 and dataset!='train':
         normal_loader, augmented_loader = loader
         augmented_features = {'normal':get_features_(model, normal_loader)}
         
         for n in range(args.n_augmentation):
-            augmented_features[f'augmented_{n}']=get_features_(model, augmented_loader)
+            augmented_features[f'augmented_{n}']=get_features_(model, augmented_loader, augmentation_num=n, dataset=dataset)
         if args.save_augmented_features != "" and dataset=='novel':
             torch.save(augmented_features, args.save_augmented_features)
             
         return augmented_features
-
-def get_features_(model, loader):
+    else: 
+        return get_features_(model, loader)
+def get_features_(model, loader, augmentation_num=None, dataset='train'):
     model.eval()
     all_features, offset, max_offset = [], 100000, 0
     for batch_idx, (data, target) in enumerate(loader):        
         with torch.no_grad():
             data, target = data.to(args.device), target.to(args.device)
-            if args.save_images != '':
-                torch.save({'target':target, 'data':data}, f'{args.save_images}_{batch_idx}')
+            if args.save_images != '' and dataset=='novel':
+                if augmentation_num == None:
+                    save_folder = os.path.join(f'{args.save_images}', 'normal')
+                    if not os.path.exists(save_folder):
+                        os.makedirs(save_folder)
+                    save_path = os.path.join(save_folder, f'images_{batch_idx}')
+                else:
+                    save_folder = os.path.join(f'{args.save_images}', f'augment_{augmentation_num}')
+                    if not os.path.exists(save_folder):
+                        os.makedirs(save_folder)
+                    save_path = os.path.join(save_folder, f'images_{batch_idx}')
+
+                torch.save({'target':target, 'data':data}, save_path)
+
             _, features = model(data)
             all_features.append(features)
             offset = min(min(target), offset)
