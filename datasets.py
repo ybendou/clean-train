@@ -25,7 +25,7 @@ class CPUDataset():
             elt = self.data[idx]
         return self.transforms(elt), self.targets[idx]
     def __len__(self):
-        if self.entire:
+        if self.entire or args.dataset_size < 0:
             return self.length
         else:
             return min(self.length, args.dataset_size)
@@ -87,7 +87,7 @@ class Dataset():
         self.batch_size = batch_size
         self.transforms = transforms
         self.permutation = torch.arange(self.length)
-        self.n_batches = (min(self.length, args.dataset_size) if entire else self.length) // self.batch_size + (0 if self.length % self.batch_size == 0 else 1) 
+        self.n_batches = (min(self.length, args.dataset_size) if not entire and args.dataset_size >= 0 else self.length) // self.batch_size + (0 if self.length % self.batch_size == 0 else 1) 
         self.shuffle = shuffle
     def __iter__(self):
         if self.shuffle:
