@@ -247,6 +247,7 @@ if few_shot:
         elements_train, elements_val, elements_novel = elements_per_class
     else:
         elements_val, elements_novel = [elements_per_class] * val_classes, [elements_per_class] * novel_classes
+        elements_train = None
     print("Dataset contains",num_classes,"base classes,",val_classes,"val classes and",novel_classes,"novel classes.")
     print("Generating runs... ", end='')
 
