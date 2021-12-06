@@ -241,10 +241,7 @@ loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset(args.d
 ### initialize few-shot meta data
 if few_shot:
     num_classes, val_classes, novel_classes, elements_per_class = num_classes
-    if args.dataset.lower() == "cubfs":
-        elements_val, elements_novel = elements_per_class
-        elements_train = None
-    elif args.dataset.lower() == "tieredimagenet":
+    if args.dataset.lower() in ["tieredimagenet", "cubfs"]:
         elements_train, elements_val, elements_novel = elements_per_class
     else:
         elements_val, elements_novel = [elements_per_class] * val_classes, [elements_per_class] * novel_classes
