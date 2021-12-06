@@ -62,7 +62,11 @@ def sphering(features):
 def centering(train_features, features):
     return features - train_features.reshape(-1, train_features.shape[2]).mean(dim = 0).unsqueeze(0).unsqueeze(0)
 
-def preprocess(train_features, features):
+def preprocess(train_features, features, elements_train=None):
+    if elements_train != None:
+        elements_train_indices = [torch.arange(l) for l in elements_train]
+        train_features = torch.cat([train_features[l, torch.arange(elements_train[l]), :] for l in range(len(elements_train))], axis=0).unsqueeze(1)
+    
     for i in range(len(args.preprocessing)):
         if args.preprocessing[i] == 'R':
             with torch.no_grad():

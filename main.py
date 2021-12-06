@@ -243,16 +243,20 @@ if few_shot:
     num_classes, val_classes, novel_classes, elements_per_class = num_classes
     if args.dataset.lower() == "cubfs":
         elements_val, elements_novel = elements_per_class
+    elif args.dataset.lower() == "tieredimagenet":
+        elements_train, elements_val, elements_novel = elements_per_class
     else:
         elements_val, elements_novel = [elements_per_class] * val_classes, [elements_per_class] * novel_classes
     print("Dataset contains",num_classes,"base classes,",val_classes,"val classes and",novel_classes,"novel classes.")
     print("Generating runs... ", end='')
+
     val_runs = list(zip(*[few_shot_eval.define_runs(args.n_ways, s, args.n_queries, val_classes, elements_val) for s in args.n_shots]))
     val_run_classes, val_run_indices = val_runs[0], val_runs[1]
     novel_runs = list(zip(*[few_shot_eval.define_runs(args.n_ways, s, args.n_queries, novel_classes, elements_novel) for s in args.n_shots]))
     novel_run_classes, novel_run_indices = novel_runs[0], novel_runs[1]
     print("done.")
     few_shot_meta_data = {
+        "elements_train":elements_train,
         "val_run_classes" : val_run_classes,
         "val_run_indices" : val_run_indices,
         "novel_run_classes" : novel_run_classes,

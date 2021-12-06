@@ -328,6 +328,7 @@ def miniImageNet(use_hd = True):
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
+
 def tieredImageNet(use_hd=True):
     """
     tiredImagenet dataset
@@ -341,37 +342,62 @@ def tieredImageNet(use_hd=True):
     """
     datasets = {}
     total = 790400
-    count = 0
+    num_elements = {}
     for subset in ['train', 'val', 'test']:
         data = []
         target = []
+        num_elements[subset]=[]
+        if subset=='train':
+            data_train = []
+            target_train = []
         subset_path = os.path.join(args.dataset_path, 'tieredimagenet', subset)
         classe_files = os.listdir(subset_path)
-
+        
         for c, classe in enumerate(classe_files):
             files = os.listdir(os.path.join(subset_path, classe))
+            count = 0
             for file in files:
                 count += 1
                 target.append(c)
+                if subset=='train':
+                    target_train.append(c)
                 path = os.path.join(subset_path, classe, file)
                 if not use_hd:
                     image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
                     data.append(image)
+                    if subset=='train':
+                        data_train.append(image)
                 else:
                     data.append(path)
+                    if subset=='train':
+                        data_train.append(path)
+            num_elements[subset].append(count)
+            if count<1300:
+                for i in range(1300-count):
+                    target.append(c) 
+                    if not use_hd: # add the same element
+                        image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
+                        data.append(image)
+                    else:
+                        data.append(path) 
+                        
         datasets[subset] = [data, torch.LongTensor(target)]
+
+    datasets['train_base']=[data_train, torch.LongTensor(target_train)] # clean train without duplicates
+            
+    assert (len(datasets['train'][0])+len(datasets['val'][0])+len(datasets['test'][0])==total), 'Total number of sample per class is not 1300'
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
     all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
     if args.episodic:
-        train_loader = episodic_iterator(datasets["train"][0], 351, transforms = train_transforms, forcecpu = True, use_hd = True)
+        train_loader = episodic_iterator(datasets["train_base"][0], 351, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
-        train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
+        train_loader = iterator(datasets["train_base"][0], datasets["train_base"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
     train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     val_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (351, 97, 160, 1300), True, False
+    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (351, 97, 160, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 import pickle
 
