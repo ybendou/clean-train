@@ -294,7 +294,7 @@ def create_model():
         return s2m2.S2M2R(args.feature_maps, input_shape, args.rotations, num_classes = num_classes).to(args.device)
 
 if args.test_features != "":
-    test_features = torch.load(args.test_features).to(args.dataset_device)
+    test_features = torch.load(args.test_features, map_location=torch.device(args.device)).to(args.dataset_device)
     print("Testing features of shape", test_features.shape)
     train_features = test_features[:num_classes]
     val_features = test_features[num_classes:num_classes + val_classes]
