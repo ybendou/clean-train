@@ -28,11 +28,11 @@ def generate_runs(data, run_classes, run_indices, batch_idx):
     res = torch.gather(cclasses, 2, run_indices)
     return res
 
-def ncm(train_features, features, run_classes, run_indices, n_shots):
+def ncm(train_features, features, run_classes, run_indices, n_shots, elements_train=None):
     with torch.no_grad():
         dim = features.shape[2]
         targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
-        features = preprocess(train_features, features)
+        features = preprocess(train_features, features, elements_train=elements_train)
         scores = []
         for batch_idx in range(n_runs // batch_few_shot_runs):
             runs = generate_runs(features, run_classes, run_indices, batch_idx)
@@ -42,11 +42,11 @@ def ncm(train_features, features, run_classes, run_indices, n_shots):
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
-def transductive_ncm(train_features, features, run_classes, run_indices, n_shots, n_iter_trans = args.transductive_n_iter, n_iter_trans_sinkhorn = args.transductive_n_iter_sinkhorn, temp_trans = args.transductive_temperature, alpha_trans = args.transductive_alpha, cosine = args.transductive_cosine):
+def transductive_ncm(train_features, features, run_classes, run_indices, n_shots, n_iter_trans = args.transductive_n_iter, n_iter_trans_sinkhorn = args.transductive_n_iter_sinkhorn, temp_trans = args.transductive_temperature, alpha_trans = args.transductive_alpha, cosine = args.transductive_cosine, elements_train=None):
     with torch.no_grad():
         dim = features.shape[2]
         targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
-        features = preprocess(train_features, features)
+        features = preprocess(train_features, features, elements_train=elements_train)
         if cosine:
             features = features / torch.norm(features, dim = 2, keepdim = True)
         scores = []
@@ -76,11 +76,11 @@ def transductive_ncm(train_features, features, run_classes, run_indices, n_shots
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
-def ncm_cosine(train_features, features, run_classes, run_indices, n_shots):
+def ncm_cosine(train_features, features, run_classes, run_indices, n_shots, elements_train=None):
     with torch.no_grad():
         dim = features.shape[2]
         targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
-        features = preprocess(train_features, features)
+        features = preprocess(train_features, features, elements_train=elements_train)
         features = sphering(features)
         scores = []
         for batch_idx in range(n_runs // batch_few_shot_runs):
@@ -94,7 +94,7 @@ def ncm_cosine(train_features, features, run_classes, run_indices, n_shots):
 
 def get_features(model, loader):
     model.eval()
-    all_features, offset, max_offset = [], 100000, 0
+    all_features, offset, max_offset = [], 1000000, 0
     for batch_idx, (data, target) in enumerate(loader):        
         with torch.no_grad():
             data, target = data.to(args.device), target.to(args.device)
@@ -106,11 +106,11 @@ def get_features(model, loader):
     print(".", end='')
     return torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
 
-def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False):
+def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False, elements_train=None):
     if transductive:
-        return transductive_ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), transductive_ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
+        return transductive_ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots, elements_train=elements_train), transductive_ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots, elements_train=elements_train)
     else:
-        return ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
+        return ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots, elements_train=elements_train), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots, elements_train=elements_train)
 
 def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data):
 
@@ -128,7 +128,7 @@ def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_
     return res
 
 def evaluate_shot(index, train_features, val_features, novel_features, few_shot_meta_data, model = None, transductive = False):
-    (val_acc, val_conf), (novel_acc, novel_conf) = eval_few_shot(train_features, val_features, novel_features, few_shot_meta_data["val_run_classes"][index], few_shot_meta_data["val_run_indices"][index], few_shot_meta_data["novel_run_classes"][index], few_shot_meta_data["novel_run_indices"][index], args.n_shots[index], transductive = transductive)
+    (val_acc, val_conf), (novel_acc, novel_conf) = eval_few_shot(train_features, val_features, novel_features, few_shot_meta_data["val_run_classes"][index], few_shot_meta_data["val_run_indices"][index], few_shot_meta_data["novel_run_classes"][index], few_shot_meta_data["novel_run_indices"][index], args.n_shots[index], transductive = transductive, elements_train=few_shot_meta_data["elements_train"])
     if val_acc > few_shot_meta_data["best_val_acc"][index]:
         if val_acc > few_shot_meta_data["best_val_acc_ever"][index]:
             few_shot_meta_data["best_val_acc_ever"][index] = val_acc
