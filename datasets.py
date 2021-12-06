@@ -6,7 +6,7 @@ import json
 import os
 
 class CPUDataset():
-    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False):
+    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False, entire = False):
         self.data = data
         if torch.is_tensor(data):
             self.length = data.shape[0]
@@ -15,6 +15,7 @@ class CPUDataset():
         self.targets = targets
         assert(self.length == targets.shape[0])
         self.batch_size = batch_size
+        self.entire = entire
         self.transforms = transforms
         self.use_hd = use_hd
     def __getitem__(self, idx):
@@ -24,7 +25,10 @@ class CPUDataset():
             elt = self.data[idx]
         return self.transforms(elt), self.targets[idx]
     def __len__(self):
-        return self.length
+        if self.entire:
+            return self.length
+        else:
+            return min(self.length, args.dataset_size)
 
 class EpisodicCPUDataset():
     def __init__(self, data, num_classes, transforms = [], episode_size = args.batch_size, use_hd = False):
@@ -72,7 +76,7 @@ class EpisodicCPUDataset():
         return self.corrected_length
 
 class Dataset():
-    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, shuffle = True, device = args.dataset_device):
+    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, shuffle = True, device = args.dataset_device, entire = False):
         if torch.is_tensor(data):
             self.length = data.shape[0]
             self.data = data.to(device)
@@ -83,7 +87,7 @@ class Dataset():
         self.batch_size = batch_size
         self.transforms = transforms
         self.permutation = torch.arange(self.length)
-        self.n_batches = self.length // self.batch_size + (0 if self.length % self.batch_size == 0 else 1)
+        self.n_batches = (min(self.length, args.dataset_size) if entire else self.length) // self.batch_size + (0 if self.length % self.batch_size == 0 else 1) 
         self.shuffle = shuffle
     def __iter__(self):
         if self.shuffle:
@@ -128,12 +132,12 @@ class EpisodicDataset():
     def __len__(self):
         return self.n_batches
 
-def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False):
+def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False, entire = False):
     if args.dataset_device == "cpu" or forcecpu:
-        dataset = CPUDataset(data, target, transforms, use_hd = use_hd)
+        dataset = CPUDataset(data, target, transforms, use_hd = use_hd, entire = entire)
         return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = min(8, os.cpu_count()))
     else:
-        return Dataset(data, target, transforms, shuffle = shuffle)
+        return Dataset(data, target, transforms, shuffle = shuffle, entire = entire)
 
 def episodic_iterator(data, num_classes, transforms, forcecpu = False, use_hd = False):
     if args.dataset_device == "cpu" or forcecpu:
@@ -281,9 +285,9 @@ def cifarfs(data_augmentation = True):
         train_loader = episodic_iterator(train_data, 64, transforms = list_trans_train)
     else:
         train_loader = iterator(train_data, train_targets, transforms = list_trans_train)
-    train_clean = iterator(train_data, train_targets, transforms = norm, shuffle = False)
-    val_loader = iterator(val_data, val_targets, transforms = norm, shuffle = False)
-    test_loader = iterator(test_data, test_targets, transforms = norm, shuffle = False)
+    train_clean = iterator(train_data, train_targets, transforms = norm, shuffle = False, entire = True)
+    val_loader = iterator(val_data, val_targets, transforms = norm, shuffle = False, entire = True)
+    test_loader = iterator(test_data, test_targets, transforms = norm, shuffle = False, entire = True)
     return (train_loader, train_clean, val_loader, test_loader), [3, 32, 32], (64, 16, 20, 600), True, False
 
 from PIL import Image
@@ -323,9 +327,9 @@ def miniImageNet(use_hd = True):
         train_loader = episodic_iterator(datasets["train"][0], 64, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
         train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
-    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
+    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
+    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 
@@ -395,9 +399,9 @@ def tieredImageNet(use_hd=True):
         train_loader = episodic_iterator(datasets["train_base"][0], 351, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
         train_loader = iterator(datasets["train_base"][0], datasets["train_base"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
-    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    val_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
+    val_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
+    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (351, 97, 160, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 import pickle
@@ -456,9 +460,9 @@ def CUBfs(use_hd=False):
         train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
         train_loader = iterator(datasets['train_base'][0], datasets['train_base'][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
-    train_clean = iterator(datasets['train'][0], datasets['train'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    val_loader = iterator(datasets['val'][0], datasets['val'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    test_loader = iterator(datasets['test'][0], datasets['test'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    train_clean = iterator(datasets['train'][0], datasets['train'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
+    val_loader = iterator(datasets['val'][0], datasets['val'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
+    test_loader = iterator(datasets['test'][0], datasets['test'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 def omniglotfs():
@@ -477,9 +481,9 @@ def omniglotfs():
         train_loader = episodic_iterator(base_data, base.shape[0], transforms = train_transforms)
     else:
         train_loader = iterator(base_data, base_targets, transforms = train_transforms)
-    train_clean = iterator(base_data, base_targets, transforms = all_transforms, shuffle = False)
-    val_loader = iterator(val_data, val_targets, transforms = all_transforms, shuffle = False)
-    test_loader = iterator(novel_data, novel_targets, transforms = all_transforms, shuffle = False)
+    train_clean = iterator(base_data, base_targets, transforms = all_transforms, shuffle = False, entire = True)
+    val_loader = iterator(val_data, val_targets, transforms = all_transforms, shuffle = False, entire = True)
+    test_loader = iterator(novel_data, novel_targets, transforms = all_transforms, shuffle = False, entire = True)
     return (train_loader, train_clean, val_loader, test_loader), [1, 100, 100], (base.shape[0], val.shape[0], novel.shape[0], novel.shape[1]), True, False
 
 def miniImageNet84():
@@ -499,9 +503,9 @@ def miniImageNet84():
         train_loader = episodic_iterator(train, 64, transforms = train_transforms, forcecpu = True)
     else:
         train_loader = iterator(train, train_targets, transforms = train_transforms, forcecpu = True)
-    train_clean = iterator(train, train_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
-    val_loader = iterator(validation, validation_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
-    test_loader = iterator(test, test_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
+    train_clean = iterator(train, train_targets, transforms = all_transforms, forcecpu = True, shuffle = False, entire = True)
+    val_loader = iterator(validation, validation_targets, transforms = all_transforms, forcecpu = True, shuffle = False, entire = True)
+    test_loader = iterator(test, test_targets, transforms = all_transforms, forcecpu = True, shuffle = False, entire = True)
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 def get_dataset(dataset_name):
