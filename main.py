@@ -24,8 +24,8 @@ print("models.")
 if args.ema > 0:
     from torch_ema import ExponentialMovingAverage
 
-
-import wandb
+if args.wandb:
+    import wandb
 
 
 
