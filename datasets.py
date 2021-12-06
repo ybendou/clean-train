@@ -459,7 +459,7 @@ def CUBfs(use_hd=False):
     train_clean = iterator(datasets['train'][0], datasets['train'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     val_loader = iterator(datasets['val'][0], datasets['val'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     test_loader = iterator(datasets['test'][0], datasets['test'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['val'])), True, False
+    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 def omniglotfs():
     base = torch.load(args.dataset_path + "omniglot/base.pt")
