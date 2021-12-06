@@ -44,7 +44,7 @@ def crit(output, features, target):
         return criterion(output, target)
 
 ### main train function
-def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
+def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = False):
     model.train()
     global last_update
     losses, total = 0., 0
@@ -109,17 +109,18 @@ def train(model, train_loader, optimizer, epoch, mixup = False, mm = False):
         total += data.shape[0]
         # update parameters
         optimizer.step()
+        scheduler.step()
         if args.ema > 0:
             ema.update()
 
         # print advances if at least 100ms have passed since last print
         if (batch_idx + 1 == len(train_loader)) or (time.time() - last_update > 0.1) and not args.quiet:
             if batch_idx + 1 < len(train_loader):
-                print("\r{:4d} {:4d} / {:4d} loss: {:.5f} time: {:s} ".format(epoch, 1 + batch_idx, len(train_loader), losses / total, format_time(time.time() - start_time)), end = "")
+                print("\r{:4d} {:4d} / {:4d} loss: {:.5f} time: {:s} lr: {:.5f} ".format(epoch, 1 + batch_idx, len(train_loader), losses / total, format_time(time.time() - start_time), float(scheduler.get_last_lr()[0])), end = "")
             else:
                 print("\r{:4d} loss: {:.5f} ".format(epoch, losses / total), end = '')
             last_update = time.time()
-    
+            
     if args.wandb:
         wandb.log({"epoch":epoch, "train_loss": losses / total})
 
@@ -185,13 +186,12 @@ def train_complete(model, loaders, mixup = False):
             else:
                 optimizer = torch.optim.SGD(model.parameters(), lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
             if args.cosine:
-                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones[0])
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones[0] * len(train_loader))
                 lr = lr * args.gamma
             else:
-                scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = args.milestones, gamma = args.gamma)
+                scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = list(np.array(args.milestones) * len(train_loader)), gamma = args.gamma)
 
-        train_stats = train(model, train_loader, optimizer, (epoch + 1), mixup = mixup, mm = epoch >= args.epochs)
-        scheduler.step()
+        train_stats = train(model, train_loader, optimizer, (epoch + 1), scheduler, mixup = mixup, mm = epoch >= args.epochs)        
         
         if args.save_model != "" and not few_shot:
             if len(args.devices) == 1:
