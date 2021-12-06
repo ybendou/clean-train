@@ -243,6 +243,7 @@ if few_shot:
     num_classes, val_classes, novel_classes, elements_per_class = num_classes
     if args.dataset.lower() == "cubfs":
         elements_val, elements_novel = elements_per_class
+        elements_train = None
     elif args.dataset.lower() == "tieredimagenet":
         elements_train, elements_val, elements_novel = elements_per_class
     else:
