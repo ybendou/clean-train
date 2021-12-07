@@ -292,44 +292,81 @@ def cifarfs(use_hd=True, data_augmentation=True):
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd)
     return (train_loader, train_clean, val_loader, test_loader), [3, 32, 32], (64, 16, 20, 600), True, False
 
-def miniImageNet(use_hd = True):
-    datasets = {}
-    classes = []
-    total = 60000
-    count = 0
-    for subset in ["train", "validation", "test"]:
+import os.path as osp
+
+class MiniImageNet(Dataset):
+
+    def __init__(self, setname_x, args):
+        IMAGE_PATH = os.path.join(args.dataset_path, 'miniimagenet2/miniimagenet/images')
+        SPLIT_PATH = os.path.join(args.dataset_path, 'miniimagenet2/miniimagenet/split')
+        if setname_x == 'train_clean':
+            setname = 'train'
+        else:
+            setname = setname_x 
+        
+        csv_path = osp.join(SPLIT_PATH, setname + '.csv')
+        lines = [x.strip() for x in open(csv_path, 'r').readlines()][1:]
+
         data = []
-        target = []
-        with open(args.dataset_path + "miniimagenetimages/" + subset + ".csv", "r") as f:
-            start = 0
-            for line in f:
-                if start == 0:
-                    start += 1
-                else:
-                    splits = line.split(",")
-                    fn, c = splits[0], splits[1]
-                    if c not in classes:
-                        classes.append(c)
-                    count += 1
-                    target.append(len(classes) - 1)
-                    path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
-                    if not use_hd:
-                        image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
-                        data.append(image)
-                    else:
-                        data.append(path)
-        datasets[subset] = [data, torch.LongTensor(target)]
-    print()
-    norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
-    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
-    if args.episodic:
-        train_loader = episodic_iterator(datasets["train"][0], 64, transforms = train_transforms, forcecpu = True, use_hd = True)
-    else:
-        train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
-    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+        label = []
+        lb = -1
+
+        self.wnids = []
+
+        for l in lines:
+            name, wnid = l.split(',')
+            path = osp.join(IMAGE_PATH, name)
+            if wnid not in self.wnids:
+                self.wnids.append(wnid)
+                lb += 1
+            data.append(path)
+            label.append(lb)
+
+        self.data = data  # data path of all data
+        self.label = label  # label of all data
+        self.num_class = len(set(label))
+
+        if setname_x == 'val' or setname_x == 'test' or setname_x=='train_clean':
+            image_size = 84
+            size_transform = transforms.Compose([transforms.Resize(92),
+                                            transforms.CenterCrop(image_size)])
+            self.transform = transforms.Compose([
+                size_transform,
+                transforms.ToTensor(),
+                transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
+                                     np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))])
+            
+        elif setname_x == 'train':
+            image_size = 84
+            size_transform = transforms.RandomResizedCrop(image_size)
+            
+            self.transform = transforms.Compose([
+                size_transform,
+                transforms.ColorJitter(brightness=0.4,contrast=0.4,saturation=0.4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
+                                     np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))])
+            
+        else:
+            raise ValueError('no such set')
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        path, label = self.data[i], self.label[i]
+        image = self.transform(Image.open(path).convert('RGB'))
+        return image, label
+
+
+def miniImageNet(use_hd = True):
+    
+    train_loader = torch.utils.data.DataLoader(MiniImageNet('train', args), batch_size=args.batch_size, shuffle=True, num_workers = min(8, os.cpu_count()))
+    train_clean  = torch.utils.data.DataLoader(MiniImageNet('train_clean', args), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
+    val_loader   = torch.utils.data.DataLoader(MiniImageNet('val', args), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
+    test_loader  = torch.utils.data.DataLoader(MiniImageNet('test', args), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
+    
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 
