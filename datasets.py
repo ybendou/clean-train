@@ -276,7 +276,7 @@ def cifarfs(use_hd=True, data_augmentation=True):
                   
         datasets[subset] = [data, torch.LongTensor(target)]
             
-    assert (len(datasets['train'][0])+len(datasets['val'][0])+len(datasets['test'][0])==total), 'Total number of sample per class is not 1300'
+    assert (len(datasets['train'][0])+len(datasets['val'][0])+len(datasets['test'][0])==total), 'Total number of sample per class is not 600'
     print()
     norm = transforms.Normalize((0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2762))
     if data_augmentation:
@@ -287,9 +287,9 @@ def cifarfs(use_hd=True, data_augmentation=True):
         train_loader = episodic_iterator(datasets['train'][0], 64, transforms = train_transforms, forcecpu=True, use_hd=True)
     else:
         train_loader = iterator(datasets['train'][0], datasets['train'][1], transforms = train_transforms, forcecpu=True)
-    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
-    val_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
-    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd, entire = True)
+    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd)
+    val_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd)
+    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd)
     return (train_loader, train_clean, val_loader, test_loader), [3, 32, 32], (64, 16, 20, 600), True, False
 
 def miniImageNet(use_hd = True):
