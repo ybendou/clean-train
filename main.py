@@ -113,13 +113,20 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
         if args.ema > 0:
             ema.update()
 
+        if few_shot and args.dataset_size > 0:
+            length = args.dataset_size // args.batch_size + (1 if args.dataset_size % args.batch_size != 0 else 0)
+        else:
+            length = len(train_loader)
         # print advances if at least 100ms have passed since last print
-        if (batch_idx + 1 == len(train_loader)) or (time.time() - last_update > 0.1) and not args.quiet:
+        if (batch_idx + 1 == length) or (time.time() - last_update > 0.1) and not args.quiet:
             if batch_idx + 1 < len(train_loader):
-                print("\r{:4d} {:4d} / {:4d} loss: {:.5f} time: {:s} lr: {:.5f} ".format(epoch, 1 + batch_idx, len(train_loader), losses / total, format_time(time.time() - start_time), float(scheduler.get_last_lr()[0])), end = "")
+                print("\r{:4d} {:4d} / {:4d} loss: {:.5f} time: {:s} lr: {:.5f} ".format(epoch, 1 + batch_idx, length, losses / total, format_time(time.time() - start_time), float(scheduler.get_last_lr()[0])), end = "")
             else:
                 print("\r{:4d} loss: {:.5f} ".format(epoch, losses / total), end = '')
             last_update = time.time()
+
+        if few_shot and total >= args.dataset_size and args.dataset_size > 0:
+            break
             
     if args.wandb:
         wandb.log({"epoch":epoch, "train_loss": losses / total})
