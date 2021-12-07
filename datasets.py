@@ -286,7 +286,7 @@ def cifarfs(use_hd=True, data_augmentation=True):
     if args.episodic:
         train_loader = episodic_iterator(datasets['train'][0], 64, transforms = train_transforms, forcecpu=True, use_hd=True)
     else:
-        train_loader = iterator(datasets['train'][0], datasets['train'][1], transforms = train_transforms, forcecpu=True)
+        train_loader = iterator(datasets['train'][0], datasets['train'][1], transforms = train_transforms, forcecpu=True, use_hd = use_hd)
     train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd)
     val_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd)
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = norm, forcecpu = True, shuffle = False, use_hd = use_hd)
