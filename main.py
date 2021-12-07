@@ -187,16 +187,21 @@ def train_complete(model, loaders, mixup = False):
 
     for epoch in range(args.epochs + args.manifold_mixup):
 
+        if few_shot and args.dataset_size > 0:
+            length = args.dataset_size // args.batch_size + (1 if args.dataset_size % args.batch_size != 0 else 0)
+        else:
+            length = len(train_loader)
+
         if (args.cosine and epoch % args.milestones[0] == 0) or epoch == 0:
             if lr < 0:
                 optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr)
             else:
                 optimizer = torch.optim.SGD(model.parameters(), lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
             if args.cosine:
-                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones[0] * len(train_loader))
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones[0] * length)
                 lr = lr * args.gamma
             else:
-                scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = list(np.array(args.milestones) * len(train_loader)), gamma = args.gamma)
+                scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones = list(np.array(args.milestones) * length), gamma = args.gamma)
 
         train_stats = train(model, train_loader, optimizer, (epoch + 1), scheduler, mixup = mixup, mm = epoch >= args.epochs)        
         
