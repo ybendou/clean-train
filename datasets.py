@@ -92,7 +92,7 @@ class Dataset():
     def __iter__(self):
         if self.shuffle:
             self.permutation = torch.randperm(self.length)
-        for i in range(self.length // self.batch_size + (1 if self.length % self.batch_size != 0 else 0)):
+        for i in range(self.n_batches):
             if torch.is_tensor(self.data):
                 yield self.transforms(self.data[self.permutation[i * self.batch_size : (i+1) * self.batch_size]]), self.targets[self.permutation[i * self.batch_size : (i+1) * self.batch_size]]
             else:
@@ -456,7 +456,7 @@ def CUBfs(use_hd=False):
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize([92,92]), transforms.CenterCrop(84), norm)
     if args.episodic:
         train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
