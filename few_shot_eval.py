@@ -141,7 +141,7 @@ def eval_few_shot(train_features, val_features, novel_features, val_run_classes,
 def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data):
 
     if "M" in args.preprocessing or args.save_features != '':
-        train_features = get_features(model, train_clean, n_aug = 1)
+        train_features = get_features(model, train_clean)
     else:
         train_features = torch.Tensor(0,0,0)
     val_features = get_features(model, val_loader)
