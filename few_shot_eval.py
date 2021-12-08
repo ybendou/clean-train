@@ -106,10 +106,10 @@ def get_features(model, loader):
         num_classes = max_offset - offset + 1
         print(".", end='')
         if augs == 0:
-            features = torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
+            features_total = torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
         else:
-            features += torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
-    return features
+            features_total += torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
+    return features_total / args.sample_aug
 
 def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False, elements_train=None):
     if transductive:
