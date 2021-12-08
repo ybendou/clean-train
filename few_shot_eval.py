@@ -113,9 +113,9 @@ def ncm_cosine(train_features, features, run_classes, run_indices, n_shots, elem
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
-def get_features(model, loader):
+def get_features(model, loader, n_aug = args.sample_aug):
     model.eval()
-    for augs in range(args.sample_aug):
+    for augs in range(n_aug):
         all_features, offset, max_offset = [], 1000000, 0
         for batch_idx, (data, target) in enumerate(loader):        
             with torch.no_grad():
@@ -130,7 +130,7 @@ def get_features(model, loader):
             features_total = torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
         else:
             features_total += torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
-    return features_total / args.sample_aug
+    return features_total / n_aug
 
 def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False, elements_train=None):
     if transductive:
@@ -141,7 +141,7 @@ def eval_few_shot(train_features, val_features, novel_features, val_run_classes,
 def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data):
 
     if "M" in args.preprocessing or args.save_features != '':
-        train_features = get_features(model, train_clean)
+        train_features = get_features(model, train_clean, n_aug = 1)
     else:
         train_features = torch.Tensor(0,0,0)
     val_features = get_features(model, val_loader)
