@@ -308,7 +308,6 @@ class MiniImageNet(Dataset):
         lines = [x.strip() for x in open(csv_path, 'r').readlines()][1:]
 
         data = []
-<<<<<<< HEAD
         label = []
         lb = -1
 
@@ -368,9 +367,104 @@ def miniImageNet(use_hd = True):
     val_loader   = torch.utils.data.DataLoader(MiniImageNet('val', args), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
     test_loader  = torch.utils.data.DataLoader(MiniImageNet('test', args), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
     
-=======
+    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
+
+
+class CUB(Dataset):
+
+    def __init__(self, setname_x, args=None, num_elem=None):
+        IMAGE_PATH = os.path.join(args.dataset_path, 'cub/')
+        SPLIT_PATH = os.path.join(args.dataset_path, 'cub/split/')
+        if setname_x == 'train_clean':
+            setname = 'train'
+        else:
+            setname = setname_x 
+        self.setname = setname
+        self.num_elem = num_elem
+
+        self.size_dict = {'train':100*60, 'val':50*60, 'test':50*60}
+        if self.num_elem !=None:
+            print('Size:', sum(self.num_elem), self.size_dict[self.setname])
+
+        txt_path = osp.join(SPLIT_PATH, setname + '.csv')
+        lines = [x.strip() for x in open(txt_path, 'r').readlines()][1:]
+
+        data = []
+        label = []
+        lb = -1
+        self.wnids = []
+
+        if setname == 'train':
+            lines.pop(5864)#this image file is broken
+
+        for l in lines:
+            context = l.split(',')
+            name = context[0]
+            wnid = context[1]
+            path = osp.join(IMAGE_PATH, name)
+            if wnid not in self.wnids:
+                self.wnids.append(wnid)
+                lb += 1
+
+            data.append(path)
+            label.append(lb)
+
+        self.data = data
+        self.label = label
+        self.num_class = np.unique(np.array(label)).shape[0]
+
+        if setname_x == 'train':
+            image_size = 84
+            self.transform = transforms.Compose([
+                transforms.RandomResizedCrop(image_size),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
+                                     np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))])
+        else:
+            image_size = 84
+            self.transform = transforms.Compose([
+                transforms.Resize(92),
+                transforms.CenterCrop(image_size),
+                transforms.ToTensor(),
+                transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]),
+                                     np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))])
+
+    def __len__(self):
+        if self.num_elem == None:
+            return len(self.data)
+        else:
+            return self.size_dict[self.setname]
+
+    def __getitem__(self, idx):
+        i = idx if idx<len(self.data) else 0 
+        path, label = self.data[i], self.label[i]
+        image = self.transform(Image.open(path).convert('RGB'))
+        return image, label
+
+
+def CUBfs(use_hd=False):
+    """
+    CUB FS dataset
+    Number of classes : 
+    - train: 100
+    - val  : 50
+    - novel: 50
+    Number of samples per class: at most 60
+    Images size : 84x84
+    """
+    classes      = []
+    datasets     = {}
+    num_elements = {}
+    path         = os.path.join(args.dataset_path, 'cub')
+    list_files = os.listdir(path)
+
+    for subset in ['train', 'val', 'test']:
+        data   = []
+        class_counter = {}
         target = []
-        with open(args.dataset_path + "miniimagenetimages/" + subset + ".csv", "r") as f:
+        csv_path = os.path.join(path, 'split', f'{subset}.csv')
+        with open(csv_path, "r") as f:
             start = 0
             for line in f:
                 if start == 0:
@@ -378,30 +472,21 @@ def miniImageNet(use_hd = True):
                 else:
                     splits = line.split(",")
                     fn, c = splits[0], splits[1]
-                    if c not in classes:
-                        classes.append(c)
-                    count += 1
-                    target.append(len(classes) - 1)
-                    path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
-                    if not use_hd:
-                        image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
-                        data.append(image)
-                    else:
-                        data.append(path)
-        datasets[subset] = [data, torch.LongTensor(target)]
-    print()
-    norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
-    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), norm)
-    if args.episodic:
-        train_loader = episodic_iterator(datasets["train"][0], 64, transforms = train_transforms, forcecpu = True, use_hd = True)
-    else:
-        train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
-    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
->>>>>>> b3dc8974b2ac5ac0425bbfadd6fba26df3574bd6
-    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
+                    if fn in list_files:
+                        c = int(c.split('.')[0])
+                        if c not in classes:
+                            classes.append(c)
+                            class_counter[len(classes)-1]=1
+                        else:
+                            class_counter[len(classes)-1]+=1
+        num_elements[subset] = list(class_counter.values())
+        
+    train_loader = torch.utils.data.DataLoader(CUB('train', args, num_elem=None), batch_size=args.batch_size, shuffle=True, num_workers = min(8, os.cpu_count()))
+    train_clean  = torch.utils.data.DataLoader(CUB('train_clean', args, num_elem=num_elements['train']), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
+    val_loader   = torch.utils.data.DataLoader(CUB('val', args, num_elem=num_elements['val']), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
+    test_loader  = torch.utils.data.DataLoader(CUB('test', args, num_elem=num_elements['test']), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
+    
+    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 
 def tieredImageNet(use_hd=True):
@@ -476,75 +561,6 @@ def tieredImageNet(use_hd=True):
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (351, 97, 160, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 import pickle
-
-def CUBfs(use_hd=False):
-    """
-    CUB FS dataset
-    Number of classes : 
-    - train: 100
-    - val  : 50
-    - novel: 50
-    Number of samples per class: at most 60
-    Images size : 84x84
-    """
-    classes      = []
-    datasets     = {}
-    num_elements = {}
-    path         = os.path.join(args.dataset_path, 'cub')
-    list_files = os.listdir(path)
-
-    for subset in ['train', 'val', 'test']:
-        data   = []
-        class_counter = {}
-        target = []
-        csv_path = os.path.join(path, 'split', f'{subset}.csv')
-        with open(csv_path, "r") as f:
-            start = 0
-            for line in f:
-                if start == 0:
-                    start += 1
-                else:
-                    splits = line.split(",")
-                    fn, c = splits[0], splits[1]
-                    if fn in list_files:
-                        c = int(c.split('.')[0])
-                        if c not in classes:
-                            classes.append(c)
-                            class_counter[len(classes)-1]=1
-                        else:
-                            class_counter[len(classes)-1]+=1
-                        target.append(len(classes)-1)
-                        file_path = os.path.join(args.dataset_path, 'cub', fn)
-                        if not use_hd:
-                            image = transforms.ToTensor()(np.array(Image.open(file_path).convert('RGB')))
-                            data.append(image)
-                        else:
-                            data.append(file_path)
-        if subset == 'train':
-            datasets['train_base'] = [data.copy(), torch.LongTensor(target)]
-        
-        for c, count in class_counter.items():
-            if count < 60:
-                for _ in range(60-count):
-                    if not use_hd:
-                        data.append(image)
-                    else:
-                        data.append(file_path)
-                    target.append(c)
-        datasets[subset] = [data, torch.LongTensor(target)]
-        num_elements[subset] = list(class_counter.values())
-    print()
-    norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
-    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), norm)
-    if args.episodic:
-        train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = True)
-    else:
-        train_loader = iterator(datasets['train_base'][0], datasets['train_base'][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
-    train_clean = iterator(datasets['train'][0], datasets['train'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    val_loader = iterator(datasets['val'][0], datasets['val'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    test_loader = iterator(datasets['test'][0], datasets['test'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 def omniglotfs():
     base = torch.load(args.dataset_path + "omniglot/base.pt")
