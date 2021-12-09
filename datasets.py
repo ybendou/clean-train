@@ -405,13 +405,11 @@ def tieredImageNet(use_hd=True):
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (351, 97, 160, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 import pickle
-from collections import Counter
 
 def CUBfs():
     with open(args.dataset_path + "CUB/base.pkl", "rb") as f:
         train_file = pickle.load(f)
     train, train_targets = [(x.float() / 256) for x in train_file['data']], torch.LongTensor(train_file['labels'])
-    num_elements_train = list(Counter(train_file['labels']).values())
     
     for i in range(len(train)):
         if train[i].shape[0] != 3:
