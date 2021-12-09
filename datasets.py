@@ -308,6 +308,7 @@ class MiniImageNet(Dataset):
         lines = [x.strip() for x in open(csv_path, 'r').readlines()][1:]
 
         data = []
+<<<<<<< HEAD
         label = []
         lb = -1
 
@@ -367,6 +368,39 @@ def miniImageNet(use_hd = True):
     val_loader   = torch.utils.data.DataLoader(MiniImageNet('val', args), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
     test_loader  = torch.utils.data.DataLoader(MiniImageNet('test', args), batch_size=args.batch_size, shuffle=False, num_workers = min(8, os.cpu_count()))
     
+=======
+        target = []
+        with open(args.dataset_path + "miniimagenetimages/" + subset + ".csv", "r") as f:
+            start = 0
+            for line in f:
+                if start == 0:
+                    start += 1
+                else:
+                    splits = line.split(",")
+                    fn, c = splits[0], splits[1]
+                    if c not in classes:
+                        classes.append(c)
+                    count += 1
+                    target.append(len(classes) - 1)
+                    path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
+                    if not use_hd:
+                        image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
+                        data.append(image)
+                    else:
+                        data.append(path)
+        datasets[subset] = [data, torch.LongTensor(target)]
+    print()
+    norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), norm)
+    if args.episodic:
+        train_loader = episodic_iterator(datasets["train"][0], 64, transforms = train_transforms, forcecpu = True, use_hd = True)
+    else:
+        train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
+    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+>>>>>>> b3dc8974b2ac5ac0425bbfadd6fba26df3574bd6
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 
@@ -431,7 +465,7 @@ def tieredImageNet(use_hd=True):
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), norm)
     if args.episodic:
         train_loader = episodic_iterator(datasets["train_base"][0], 351, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
@@ -502,7 +536,7 @@ def CUBfs(use_hd=False):
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize([92,92]), transforms.CenterCrop(84), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), norm)
     if args.episodic:
         train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
@@ -523,7 +557,7 @@ def omniglotfs():
     novel_data = novel.reshape(-1, novel.shape[2], novel.shape[3], novel.shape[4]).float()
     novel_targets = torch.arange(novel.shape[0]).unsqueeze(1).repeat(1, novel.shape[1]).reshape(-1)
     train_transforms = torch.nn.Sequential(transforms.RandomCrop(100, padding = 4), transforms.Normalize((0.0782) ,(0.2685)))
-    all_transforms = torch.nn.Sequential(transforms.CenterCrop(100), transforms.Normalize((0.0782), (0.2685)))
+    all_transforms = torch.nn.Sequential(transforms.CenterCrop(100), transforms.Normalize((0.0782), (0.2685))) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomCrop(100, padding = 4), transforms.Normalize((0.0782) ,(0.2685)))
     if args.episodic:
         train_loader = episodic_iterator(base_data, base.shape[0], transforms = train_transforms)
     else:
@@ -545,7 +579,7 @@ def miniImageNet84():
     validation, validation_targets = [transforms.ToTensor()(x) for x in validation_file["data"]], validation_file["labels"]
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84), norm)
     if args.episodic:
         train_loader = episodic_iterator(train, 64, transforms = train_transforms, forcecpu = True)
     else:

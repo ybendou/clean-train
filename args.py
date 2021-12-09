@@ -78,6 +78,7 @@ parser.add_argument("--n-shots", type=str, default="[1,5]", help="how many shots
 parser.add_argument("--n-runs", type=int, default=10000, help="number of few-shot runs")
 parser.add_argument("--n-ways", type=int, default=5, help="number of few-shot ways")
 parser.add_argument("--n-queries", type=int, default=15, help="number of few-shot queries")
+parser.add_argument("--sample-aug", type=int, default=1, help="number of versions of support/query samples (using random crop) 1 means no augmentation")
 parser.add_argument("--ncm-loss", action="store_true", help="use ncm output instead of linear")
 parser.add_argument("--episodic", action="store_true", help="use episodic training")
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")

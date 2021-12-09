@@ -66,13 +66,34 @@ def transductive_ncm(train_features, features, run_classes, run_indices, n_shots
                     soft_sims = soft_sims / soft_sims.sum(dim = 2, keepdim = True) * args.n_ways
                     soft_sims = soft_sims / soft_sims.sum(dim = 1, keepdim = True) * args.n_queries
                 new_means = ((runs[:,:,:n_shots].mean(dim = 2) * n_shots + torch.einsum("rsw,rsd->rwd", soft_sims, runs[:,:,n_shots:].reshape(runs.shape[0], -1, runs.shape[3])))) / runs.shape[2]
-                new_means = new_means / torch.norm(new_means, dim = 2, keepdim = True)
+                if cosine:
+                    new_means = new_means / torch.norm(new_means, dim = 2, keepdim = True)
                 means = means * alpha_trans + (1 - alpha_trans) * new_means
-                means = means / torch.norm(means, dim = 2, keepdim = True)
+                if cosine:
+                    means = means / torch.norm(means, dim = 2, keepdim = True)
             if cosine:
                 winners = torch.max(similarities.reshape(runs.shape[0], runs.shape[1], runs.shape[2] - n_shots, -1), dim = 3)[1]
             else:
                 winners = torch.min(similarities.reshape(runs.shape[0], runs.shape[1], runs.shape[2] - n_shots, -1), dim = 3)[1]
+            scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
+        return stats(scores, "")
+
+def kmeans(train_features, features, run_classes, run_indices, n_shots, elements_train=None):
+    with torch.no_grad():
+        dim = features.shape[2]
+        targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
+        features = preprocess(train_features, features, elements_train=elements_train)
+        scores = []
+        for batch_idx in range(n_runs // batch_few_shot_runs):
+            runs = generate_runs(features, run_classes, run_indices, batch_idx)
+            means = torch.mean(runs[:,:,:n_shots], dim = 2)
+            for i in range(500):
+                similarities = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, -1, 1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, dim), dim = 3, p = 2)
+                new_allocation = (similarities == torch.min(similarities, dim = 2, keepdim = True)[0]).float()
+                new_allocation = new_allocation / new_allocation.sum(dim = 1, keepdim = True)
+                allocation = new_allocation
+                means = (runs[:,:,:n_shots].mean(dim = 2) * n_shots + torch.einsum("rsw,rsd->rwd", allocation, runs[:,:,n_shots:].reshape(runs.shape[0], -1, runs.shape[3])) * args.n_queries) / runs.shape[2]
+            winners = torch.min(similarities.reshape(runs.shape[0], runs.shape[1], runs.shape[2] - n_shots, -1), dim = 3)[1]
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
@@ -92,19 +113,24 @@ def ncm_cosine(train_features, features, run_classes, run_indices, n_shots, elem
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
-def get_features(model, loader):
+def get_features(model, loader, n_aug = args.sample_aug):
     model.eval()
-    all_features, offset, max_offset = [], 1000000, 0
-    for batch_idx, (data, target) in enumerate(loader):        
-        with torch.no_grad():
-            data, target = data.to(args.device), target.to(args.device)
-            _, features = model(data)
-            all_features.append(features)
-            offset = min(min(target), offset)
-            max_offset = max(max(target), max_offset)
-    num_classes = max_offset - offset + 1
-    print(".", end='')
-    return torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
+    for augs in range(n_aug):
+        all_features, offset, max_offset = [], 1000000, 0
+        for batch_idx, (data, target) in enumerate(loader):        
+            with torch.no_grad():
+                data, target = data.to(args.device), target.to(args.device)
+                _, features = model(data)
+                all_features.append(features)
+                offset = min(min(target), offset)
+                max_offset = max(max(target), max_offset)
+        num_classes = max_offset - offset + 1
+        print(".", end='')
+        if augs == 0:
+            features_total = torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
+        else:
+            features_total += torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
+    return features_total / n_aug
 
 def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False, elements_train=None):
     if transductive:
