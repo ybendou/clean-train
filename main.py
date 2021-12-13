@@ -309,7 +309,13 @@ def create_model():
         return s2m2.S2M2R(args.feature_maps, input_shape, args.rotations, num_classes = num_classes).to(args.device)
 
 if args.test_features != "":
-    test_features = torch.load(args.test_features, map_location=torch.device(args.device)).to(args.dataset_device)
+    try:
+        filenames = eval(args.test_features)
+    except:
+        filenames = args.test_features
+    if isinstance(filenames, str):
+        filenames = [filenames]
+    test_features = torch.cat([torch.load(fn, map_location=torch.device(args.device)).to(args.dataset_device) for fn in filenames], dim = 2)
     print("Testing features of shape", test_features.shape)
     train_features = test_features[:num_classes]
     val_features = test_features[num_classes:num_classes + val_classes]
