@@ -444,7 +444,7 @@ def fc100(use_hd=True):
             
     assert (len(datasets['train'][0])+len(datasets['val'][0])+len(datasets['test'][0])==total), 'Total number of sample per class is not 1300'
     print()
-    n image_size = 84
+    image_size = 84
     norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
                                            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), 
