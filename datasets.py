@@ -515,7 +515,7 @@ def CUBfs():
     norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
-                                           transforms.ImageJitter(Brightness=0.4, Contrast=0.4, Color=0.4), 
+                                           transforms.ColorJitter(brightness=0.4, contrast=0.4, color=0.4), 
                                            transforms.RandomHorizontalFlip(), 
                                            transforms.ToTensor(),
                                            norm)
