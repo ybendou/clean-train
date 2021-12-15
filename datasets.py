@@ -515,14 +515,12 @@ def CUBfs():
     norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
 
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
-                                           transforms.ColorJitter(brightness=0.4, contrast=0.4, color=0.4), 
+                                           transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), 
                                            transforms.RandomHorizontalFlip(), 
-                                           transforms.ToTensor(),
                                            norm)
 
     all_transforms = torch.nn.Sequential(transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
                                          transforms.CenterCrop(image_size), 
-                                         transforms.ToTensor(), 
                                          norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), transforms.ToTensor(), norm)
     if args.episodic:
         train_loader = episodic_iterator(train_clean, 100, transforms = train_transforms, forcecpu = True, use_hd = True)
