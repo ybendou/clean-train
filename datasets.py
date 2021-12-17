@@ -464,7 +464,7 @@ def fc100(use_hd=True):
 
 import pickle
 
-def CUBfs():
+def CUBfsOld():
     with open(args.dataset_path + "CUB/base.pkl", "rb") as f:
         train_file = pickle.load(f)
     train, train_targets = [(x.float() / 256) for x in train_file['data']], torch.LongTensor(train_file['labels'])
@@ -542,6 +542,75 @@ def CUBfs():
     test_loader = iterator(novel, novel_targets, transforms = all_transforms, forcecpu = True, shuffle = False)
 
     return (train_loader, train_clean, val_loader, test_loader), [3, image_size, image_size], (100, 50, 50, (num_elements_train, num_elements_val, num_elements_novel)), True, False
+
+
+def CUBfs():
+    classes      = []
+    datasets     = {}
+    num_elements = {}
+    path         = os.path.join(args.dataset_path, 'cub')    
+    list_files = os.listdir(path)
+    for subset in ['train', 'val', 'test']:
+        data   = []
+        class_counter = {}
+        target = []
+        csv_path = os.path.join(path, 'split', f'{subset}.csv')
+        with open(csv_path, "r") as f:
+            start = 0
+            for line in f:
+                if start == 0:
+                    start += 1
+                else:
+                    splits = line.split(",")
+                    fn, c = splits[0], splits[1]
+                    if fn in list_files:
+                        c = int(c.split('.')[0])
+                        if c not in classes:
+                            classes.append(c)
+                            class_counter[len(classes)-1]=1
+                        else:
+                            class_counter[len(classes)-1]+=1
+                        target.append(len(classes)-1)
+                        file_path = os.path.join(args.dataset_path, 'cub', fn)
+                        if not use_hd:
+                            image = transforms.ToTensor()(np.array(Image.open(file_path).convert('RGB')))
+                            data.append(image)
+                        else:
+                            data.append(file_path)
+        if subset == 'train':
+            datasets['train_base'] = [data.copy(), torch.LongTensor(target)]
+        
+        for c, count in class_counter.items():
+            if count < 60:
+                for _ in range(60-count):
+                    if not use_hd:
+                        data.append(image)
+                    else:
+                        data.append(file_path)
+                    target.append(c)
+                
+        datasets[subset] = [data, torch.LongTensor(target)]
+        num_elements[subset] = list(class_counter.values())
+
+    image_size = 84
+    norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
+                                           transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), 
+                                           transforms.RandomHorizontalFlip(), 
+                                           norm)
+
+    all_transforms = torch.nn.Sequential(transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
+                                         transforms.CenterCrop(image_size), 
+                                         norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), norm)
+    if args.episodic:
+        train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = True)
+    else:
+        train_loader = iterator(datasets['train_base'][0], datasets['train_base'][1], transforms = train_transforms, forcecpu = True)
+    train_clean = iterator(datasets['train'][0], datasets['train'][1], transforms = all_transforms, forcecpu = True, shuffle = False)
+    val_loader = iterator(datasets['val'][0], datasets['val'][1], transforms = all_transforms, forcecpu = True, shuffle = False)
+    test_loader = iterator(datasets['test'][0], datasets['test'][1], transforms = all_transforms, forcecpu = True, shuffle = False)
+
+    return (train_loader, train_clean, val_loader, test_loader), [3, image_size, image_size], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
 
 def omniglotfs():
     base = torch.load(args.dataset_path + "omniglot/base.pt")
