@@ -544,7 +544,7 @@ def CUBfsOld():
     return (train_loader, train_clean, val_loader, test_loader), [3, image_size, image_size], (100, 50, 50, (num_elements_train, num_elements_val, num_elements_novel)), True, False
 
 
-def CUBfs():
+def CUBfs(use_hd=False):
     classes      = []
     datasets     = {}
     num_elements = {}
@@ -603,7 +603,7 @@ def CUBfs():
                                          transforms.CenterCrop(image_size), 
                                          norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), norm)
     if args.episodic:
-        train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = True)
+        train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = use_hd)
     else:
         train_loader = iterator(datasets['train_base'][0], datasets['train_base'][1], transforms = train_transforms, forcecpu = True)
     train_clean = iterator(datasets['train'][0], datasets['train'][1], transforms = all_transforms, forcecpu = True, shuffle = False)
