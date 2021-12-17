@@ -278,7 +278,6 @@ def cifarfs(use_hd=True, data_augmentation=True):
             
     assert (len(datasets['train'][0])+len(datasets['val'][0])+len(datasets['test'][0])==total), 'Total number of sample per class is not 600'
     print()
-    norm = transforms.Normalize((0.5071, 0.4865, 0.4409), (0.2673, 0.2564, 0.2762))
     image_size = 32
     norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
@@ -288,7 +287,7 @@ def cifarfs(use_hd=True, data_augmentation=True):
 
     all_transforms = torch.nn.Sequential(transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
                                         transforms.CenterCrop(image_size), 
-                                        norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), transforms.ToTensor(), norm)
+                                        norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), transforms.ToTensor(), norm)
     if args.episodic:
         train_loader = episodic_iterator(datasets['train'][0], 64, transforms = train_transforms, forcecpu=True, use_hd=True)
     else:
@@ -453,7 +452,7 @@ def fc100(use_hd=True):
 
     all_transforms = torch.nn.Sequential(transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
                                          transforms.CenterCrop(image_size), 
-                                         norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), transforms.ToTensor(), norm)
+                                         norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), transforms.ToTensor(), norm)
     if args.episodic:
         train_loader = episodic_iterator(datasets["train"][0], 60, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
