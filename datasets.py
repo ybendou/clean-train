@@ -544,7 +544,7 @@ def CUBfsOld():
     return (train_loader, train_clean, val_loader, test_loader), [3, image_size, image_size], (100, 50, 50, (num_elements_train, num_elements_val, num_elements_novel)), True, False
 
 
-def CUBfs(use_hd=False):
+def CUBfsDeepEMD(use_hd=False):
     classes      = []
     datasets     = {}
     num_elements = {}
@@ -611,6 +611,79 @@ def CUBfs(use_hd=False):
     test_loader = iterator(datasets['test'][0], datasets['test'][1], transforms = all_transforms, forcecpu = True, shuffle = False)
 
     return (train_loader, train_clean, val_loader, test_loader), [3, image_size, image_size], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
+def cubfs(use_hd=True):
+    datasets     = {}
+    num_elements = {}
+    path         = os.path.join(args.dataset_path, 'CUB_200_2011')    
+    images_path         = os.path.join(path, 'CUB_200_2011', 'images')    
+    list_files = os.listdir(images_path)
+    num_elements = {}
+    buffer = {'train':0, 'val':100, 'test':150}
+
+    for subset in ['train', 'val', 'test']:
+        data = []
+        target = []
+        num_elements[subset]=[]
+        if subset=='train':
+            files = [f for f in list_files if int(f.split('.')[0])%2==0]
+            data_train = []
+            target_train = []
+        elif subset=='val':
+            files = [f for f in list_files if int(f.split('.')[0])%4==1]
+        elif subset=='test':
+            files = [f for f in list_files if int(f.split('.')[0])%4==3]
+
+        for c, folder in enumerate(files):
+            count = 0
+            images = os.listdir(os.path.join(images_path, folder))
+            for file in images:
+                count+=1
+                target.append(c+buffer[subset])
+                if subset == 'train':
+                    target_train.append(c+buffer[subset])
+                path = os.path.join(images_path, folder, file)
+                if not use_hd:
+                    image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
+                    data.append(image)
+                    if subset == 'train':
+                        data_train.append(image)
+                else:
+                    data.append(path)
+                    if subset == 'train':
+                        data_train.append(path)
+            num_elements[subset].append(count)
+            if count<60:
+                for i in range(60-count):
+                    target.append(c+buffer[subset]) 
+                    if not use_hd: # add the same element
+                        data.append(image)
+                    else:
+                        data.append(path) 
+
+        datasets[subset] = [data, torch.LongTensor(target)]
+        if subset == 'train':
+            datasets['train_base'] = [data_train, torch.LongTensor(target_train)] # clean train without duplicates
+    
+    image_size = 84
+    norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
+                                           transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), 
+                                           transforms.RandomHorizontalFlip(), 
+                                           norm)
+
+    all_transforms = torch.nn.Sequential(transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
+                                         transforms.CenterCrop(image_size), 
+                                         norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), norm)
+    if args.episodic:
+        train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = use_hd)
+    else:
+        train_loader = iterator(datasets['train_base'][0], datasets['train_base'][1], transforms = train_transforms, forcecpu = True, use_hd=use_hd)
+    train_clean = iterator(datasets['train'][0], datasets['train'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd=use_hd)
+    val_loader = iterator(datasets['val'][0], datasets['val'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd=use_hd)
+    test_loader = iterator(datasets['test'][0], datasets['test'][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd=use_hd)
+
+    return (train_loader, train_clean, val_loader, test_loader), [3, image_size, image_size], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
+
 
 def omniglotfs():
     base = torch.load(args.dataset_path + "omniglot/base.pt")
