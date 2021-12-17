@@ -611,7 +611,7 @@ def CUBfsDeepEMD(use_hd=False):
     test_loader = iterator(datasets['test'][0], datasets['test'][1], transforms = all_transforms, forcecpu = True, shuffle = False)
 
     return (train_loader, train_clean, val_loader, test_loader), [3, image_size, image_size], (100, 50, 50, (num_elements['train'], num_elements['val'], num_elements['test'])), True, False
-def cubfs(use_hd=True):
+def CUBfs(use_hd=True):
     datasets     = {}
     num_elements = {}
     path         = os.path.join(args.dataset_path, 'CUB_200_2011')    
