@@ -277,17 +277,18 @@ def cifarfs(use_hd=True, data_augmentation=True):
         datasets[subset] = [data, torch.LongTensor(target)]
             
     assert (len(datasets['train'][0])+len(datasets['val'][0])+len(datasets['test'][0])==total), 'Total number of sample per class is not 600'
-    print()
+
     image_size = 32
     norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
-                                        transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), 
-                                        transforms.RandomHorizontalFlip(), 
-                                        norm)
+                                           transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), 
+                                           transforms.RandomHorizontalFlip(), 
+                                           norm)
 
     all_transforms = torch.nn.Sequential(transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
-                                        transforms.CenterCrop(image_size), 
-                                        norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), transforms.ToTensor(), norm)
+                                         transforms.CenterCrop(image_size), 
+                                         norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), norm)
+
     if args.episodic:
         train_loader = episodic_iterator(datasets['train'][0], 64, transforms = train_transforms, forcecpu=True, use_hd=True)
     else:
@@ -295,7 +296,8 @@ def cifarfs(use_hd=True, data_augmentation=True):
     train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     val_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    return (train_loader, train_clean, val_loader, test_loader), [3, 32, 32], (64, 16, 20, 600), True, False
+
+    return (train_loader, train_clean, val_loader, test_loader), [3,image_size, image_size], (64, 16, 20, 600), True, False
 
 def miniImageNet(use_hd = True):
     datasets = {}
@@ -327,7 +329,7 @@ def miniImageNet(use_hd = True):
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84), norm)
     if args.episodic:
         train_loader = episodic_iterator(datasets["train"][0], 64, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
@@ -399,7 +401,7 @@ def tieredImageNet(use_hd=True):
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84, scale=(0.14,1)), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), transforms.CenterCrop(84), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(84), norm)
     if args.episodic:
         train_loader = episodic_iterator(datasets["train_base"][0], 351, transforms = train_transforms, forcecpu = True, use_hd = True)
     else:
@@ -443,6 +445,7 @@ def fc100(use_hd=True):
             
     assert (len(datasets['train'][0])+len(datasets['val'][0])+len(datasets['test'][0])==total), 'Total number of sample per class is not 1300'
     print()
+
     image_size = 84
     norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
