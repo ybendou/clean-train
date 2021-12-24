@@ -471,6 +471,7 @@ def CUBfs(use_hd=True):
     path         = os.path.join(args.dataset_path, 'CUB_200_2011')    
     images_path         = os.path.join(path, 'CUB_200_2011', 'images')    
     list_files = os.listdir(images_path)
+    list_files.sort()
     num_elements = {}
     buffer = {'train':0, 'val':100, 'test':150}
 
