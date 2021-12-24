@@ -480,13 +480,13 @@ def CUBfs(use_hd=True):
         target = []
         num_elements[subset]=[]
         if subset=='train':
-            files = [f for f in list_files if int(f.split('.')[0])%2==0]
+            files = [f for f in list_files if (int(f.split('.')[0])-1)%2==0]
             data_train = []
             target_train = []
         elif subset=='val':
-            files = [f for f in list_files if int(f.split('.')[0])%4==1]
+            files = [f for f in list_files if (int(f.split('.')[0])-1)%4==1]
         elif subset=='test':
-            files = [f for f in list_files if int(f.split('.')[0])%4==3]
+            files = [f for f in list_files if (int(f.split('.')[0])-1)%4==3]
 
         for c, folder in enumerate(files):
             count = 0
