@@ -468,25 +468,37 @@ def fc100(use_hd=True):
 def CUBfs(use_hd=True):
     datasets     = {}
     num_elements = {}
-    path         = os.path.join(args.dataset_path, 'CUB_200_2011')    
-    images_path         = os.path.join(path, 'CUB_200_2011', 'images')    
+    folders_path         = os.path.join(args.dataset_path, 'CUB_200_2011')    
+    images_path         = os.path.join(folders_path, 'CUB_200_2011', 'images')    
     list_files = os.listdir(images_path)
+    list_files.sort()
     num_elements = {}
     buffer = {'train':0, 'val':100, 'test':150}
-
+    class_names = {}
     for subset in ['train', 'val', 'test']:
         data = []
         target = []
         num_elements[subset]=[]
+        
         if subset=='train':
-            files = [f for f in list_files if int(f.split('.')[0])%2==0]
             data_train = []
             target_train = []
-        elif subset=='val':
-            files = [f for f in list_files if int(f.split('.')[0])%4==1]
-        elif subset=='test':
-            files = [f for f in list_files if int(f.split('.')[0])%4==3]
-
+        
+        csv_path = os.path.join(folders_path, 'split', f'{subset}.csv')
+        class_names[subset] = []
+        with open(csv_path, "r") as f:
+            start = 0
+            for line in f:
+                if start == 0:
+                    start += 1
+                else:
+                    splits = line.split(",")
+                    fn, c = splits[0], splits[1]
+                    fn2 = ''.join([i for i in fn if not i.isdigit()])
+                    fn2 = fn2.replace('.', '').replace('_', '').replace('jpg', '').lower()
+                    if fn2 not in class_names[subset]:
+                        class_names[subset].append(fn2)
+        files = [fn for fn in list_files if (''.join([i for i in fn if not i.isdigit()])).replace('.', '').replace('_', '').replace('jpg', '').lower() in class_names[subset]]
         for c, folder in enumerate(files):
             count = 0
             images = os.listdir(os.path.join(images_path, folder))
