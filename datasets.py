@@ -537,9 +537,9 @@ def CUBfs(use_hd=True):
                                            transforms.RandomHorizontalFlip(), 
                                            norm)
 
-    all_transforms = torch.nn.Sequential(transforms.Resize(int(1.15*image_size)),#transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
+    all_transforms = torch.nn.Sequential(transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
                                          transforms.CenterCrop(image_size), 
-                                         norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop([image_size, image_size], scale=(0.14,1)), norm)
+                                         norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), norm)
     if args.episodic:
         train_loader = episodic_iterator(datasets['train_base'][0], 100, transforms = train_transforms, forcecpu = True, use_hd = use_hd)
     else:
