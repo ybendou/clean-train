@@ -453,7 +453,7 @@ def fc100(use_hd=True):
                                            transforms.RandomHorizontalFlip(), 
                                            norm)
 
-    all_transforms = torch.nn.Sequential(transforms.Resize([int(1.15*image_size), int(1.15*image_size)]), 
+    all_transforms = torch.nn.Sequential(transforms.Resize(92), 
                                          transforms.CenterCrop(image_size), 
                                          norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.14,1)), norm)
     if args.episodic:
