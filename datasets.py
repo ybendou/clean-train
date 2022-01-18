@@ -319,7 +319,14 @@ def miniImageNet(use_hd = True):
                         classes.append(c)
                     count += 1
                     target.append(len(classes) - 1)
-                    path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
+                    
+                    if subset=='test':
+                        path = args.dataset_path + "miniimagenetCropsSaliency/" + "testWbuffer/" + fn
+                    else:
+                        path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
+                    
+                    #path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
+                    
                     if not use_hd:
                         image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
                         data.append(image)
