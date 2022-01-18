@@ -84,9 +84,11 @@ parser.add_argument("--episodic", action="store_true", help="use episodic traini
 parser.add_argument("--episodes-per-epoch", type=int, default=100, help="number of episodes per epoch")
 # only for transductive, used with "test-features"
 parser.add_argument("--transductive", action="store_true", help ="test features in transductive setting")
+parser.add_argument("--transductive-softkmeans", action="store_true", help="use softkmeans for few-shot transductive")
 parser.add_argument("--transductive-n-iter", type=int, default=50, help="number of iterations for few-shot transductive")
 parser.add_argument("--transductive-n-iter-sinkhorn", type=int, default=200, help="number of iterations of sinkhorn for few-shot transductive")
 parser.add_argument("--transductive-temperature", type=float, default=14, help="temperature for few-shot transductive")
+parser.add_argument("--transductive-temperature-softkmeans", type=float, default=20, help="temperature for few-shot transductive is using softkmeans")
 parser.add_argument("--transductive-alpha", type=float, default=0.84, help="momentum for few-shot transductive")
 parser.add_argument("--transductive-cosine", action="store_true", help="use cosine similarity for few-shot evaluation")
 

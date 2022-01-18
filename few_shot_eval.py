@@ -97,6 +97,25 @@ def kmeans(train_features, features, run_classes, run_indices, n_shots, elements
             scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
         return stats(scores, "")
 
+def softkmeans(train_features, features, run_classes, run_indices, n_shots, transductive_temperature_softkmeans=args.transductive_temperature_softkmeans, elements_train=None):
+    with torch.no_grad():
+        dim = features.shape[2]
+        targets = torch.arange(args.n_ways).unsqueeze(1).unsqueeze(0).to(args.device)
+        features = preprocess(train_features, features, elements_train=elements_train)
+        scores = []
+        for batch_idx in range(n_runs // batch_few_shot_runs):
+            runs = generate_runs(features, run_classes, run_indices, batch_idx)
+            means = torch.mean(runs[:,:,:n_shots], dim = 2)
+            for i in range(30):
+                similarities = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, -1, 1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, dim), dim = 3, p = 2)
+                soft_allocations = F.softmax(-similarities.pow(2)*args.transductive_temperature_softkmeans, dim=2)
+                soft_allocations = soft_allocations / soft_allocations.sum(dim = 1, keepdim = True)
+                means = torch.mean(runs[:,:,:n_shots], dim = 2)*n_shots + torch.einsum("rsw,rsd->rwd", soft_allocations, runs[:,:,n_shots:].reshape(runs.shape[0], -1, runs.shape[3]))*args.n_queries
+                means = means/(args.n_queries+n_shots)
+            winners = torch.min(similarities.reshape(runs.shape[0], runs.shape[1], runs.shape[2] - n_shots, -1), dim = 3)[1]
+            scores += list((winners == targets).float().mean(dim = 1).mean(dim = 1).to("cpu").numpy())
+        return stats(scores, "")
+
 def ncm_cosine(train_features, features, run_classes, run_indices, n_shots, elements_train=None):
     with torch.no_grad():
         dim = features.shape[2]
@@ -132,9 +151,12 @@ def get_features(model, loader, n_aug = args.sample_aug):
             features_total += torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
     return features_total / n_aug
 
-def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False, elements_train=None):
+def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False,elements_train=None):
     if transductive:
-        return kmeans(train_features, val_features, val_run_classes, val_run_indices, n_shots, elements_train=elements_train), kmeans(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots, elements_train=elements_train)
+        if args.transductive_softkmeans:
+            return softkmeans(train_features, val_features, val_run_classes, val_run_indices, n_shots, elements_train=elements_train), softkmeans(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots, elements_train=elements_train)
+        else:
+            return kmeans(train_features, val_features, val_run_classes, val_run_indices, n_shots, elements_train=elements_train), kmeans(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots, elements_train=elements_train)
     else:
         return ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots, elements_train=elements_train), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots, elements_train=elements_train)
 
