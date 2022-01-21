@@ -321,7 +321,7 @@ def miniImageNet(use_hd = True):
                     target.append(len(classes) - 1)
                     
                     if subset=='test':
-                        path = args.dataset_path + "miniimagenetCropsSaliency/" + "testWbuffer/" + fn
+                        path = args.dataset_path + "miniimagenetCropsSaliency/" + "testWbufferV2/" + fn
                     else:
                         path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
                     
