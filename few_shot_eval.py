@@ -105,6 +105,7 @@ def softkmeans(train_features, features, run_classes, run_indices, n_shots, tran
         scores = []
         for batch_idx in range(n_runs // batch_few_shot_runs):
             runs = generate_runs(features, run_classes, run_indices, batch_idx)
+            runs = postprocess(runs)
             means = torch.mean(runs[:,:,:n_shots], dim = 2)
             for i in range(30):
                 similarities = torch.norm(runs[:,:,n_shots:].reshape(batch_few_shot_runs, -1, 1, dim) - means.reshape(batch_few_shot_runs, 1, args.n_ways, dim), dim = 3, p = 2)
