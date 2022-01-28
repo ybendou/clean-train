@@ -278,26 +278,30 @@ if args.base != "" and args.val != "" and args.novel != "":
 
 ### initialize few-shot meta data
 if few_shot:
-    num_classes, val_classes, novel_classes, elements_per_class = num_classes
+    if args.dataset != "":
+        num_classes, val_classes, novel_classes, elements_per_class = num_classes
     if args.dataset.lower() in ["tieredimagenet", "cubfs"]:
         elements_train, elements_val, elements_novel = elements_per_class
-    elif args.base != "":
-        if args.base.lower() in ["tieredimagenet", "cubfs"]:
-            elements_train, _, _ = elements_per_classb[0]
-        else:
-            elements_train, _, _ = elements_per_classb
-        if args.val.lower() in ["tieredimagenet", "cubfs"]:
-            _, elements_val,_ = elements_per_classv[1]
-        else:
-             _, elements_val,_ = elements_per_classv
-        if args.novel.lower() in ["tieredimagenet", "cubfs"]:
-            _, _, elements_novel = elements_per_classn[2]
-        else:
-            _, _, elements_novel = elements_per_classn
-        num_classes = (num_classesb[0], num_classesv[1] , num_classesv[2] , (elements_train,elements_val ,elements_novel))
-    else:
+    elif args.dataset != "":
         elements_val, elements_novel = [elements_per_class] * val_classes, [elements_per_class] * novel_classes
         elements_train = None
+    elif args.base != "":
+        num_classes , val_classes , novel_classes = num_classesb[0] , num_classesv[1] ,num_classesn[2]
+        if args.base.lower() in ["tieredimagenet", "cubfs"]:
+            elements_train= num_classesb[3][0]
+        else:
+            elements_train = num_classesb[3]
+        if args.val.lower() in ["tieredimagenet", "cubfs"]:
+             elements_val = num_classesv[3][1]
+        else:
+            elements_val  =  [num_classesv[3]] *val_classes
+        if args.novel.lower() in ["tieredimagenet", "cubfs"]:
+            elements_novel = num_classesn[3][2]
+        else:
+            elements_novel = [num_classesn[3]]*novel_classes
+
+    
+
     print("Dataset contains",num_classes,"base classes,",val_classes,"val classes and",novel_classes,"novel classes.")
     print("Generating runs... ", end='')
 
