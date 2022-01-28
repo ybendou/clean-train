@@ -249,12 +249,52 @@ def train_complete(model, loaders, mixup = False):
         return test_stats
 
 ### process main arguments
-loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset(args.dataset)
+if args.dataset != "" :
+    loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset(args.dataset)
+
+if args.base != "" and args.val != "" and args.novel != "":
+    loadersb, input_shapeb, num_classesb, few_shotb, top_5b = datasets.get_dataset(args.base)
+    if args.base == args.val:
+        loadersv, input_shapev, num_classesv, few_shotv, top_5v  = loadersb, input_shapeb, num_classesb, few_shotb, top_5b
+    else:
+        loadersv, input_shapev, num_classesv, few_shotv, top_5v = datasets.get_dataset(args.val)
+    if args.base == args.novel:
+        loadersn, input_shapen, num_classesn, few_shotn, top_5n = loadersb, input_shapeb, num_classesb, few_shotb, top_5b
+    elif args.base != args.novel and args.val == args.novel :
+        loadersn, input_shapen, num_classesn, few_shotn, top_5n = loadersv, input_shapev, num_classesv, few_shotv, top_5v
+    else:
+        loadersn, input_shapen, num_classesn, few_shotn, top_5n = datasets.get_dataset(args.novel)
+    loaders = (loadersb[0],loadersb[1], loadersv[2],loadersn[3])
+
+    if input_shapen != input_shapeb or input_shapen != input_shapev or few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n :
+        print(input_shapen != input_shapeb , input_shapen != input_shapev , few_shotb != few_shotv , few_shotb != few_shotn , top_5b!=top_5v,top_5b!=top_5n )
+        print('input_shapen != input_shapeb or input_shapen != input_shapev or few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n')
+        raise InputError('the cross domain needs the same input dimension of images')
+    else:
+        input_shape = input_shapeb
+        few_shot =few_shotb
+        top_5 = top_5b
+
+
 ### initialize few-shot meta data
 if few_shot:
     num_classes, val_classes, novel_classes, elements_per_class = num_classes
     if args.dataset.lower() in ["tieredimagenet", "cubfs"]:
         elements_train, elements_val, elements_novel = elements_per_class
+    elif args.base != "":
+        if args.base.lower() in ["tieredimagenet", "cubfs"]:
+            elements_train, _, _ = elements_per_classb[0]
+        else:
+            elements_train, _, _ = elements_per_classb
+        if args.val.lower() in ["tieredimagenet", "cubfs"]:
+            _, elements_val,_ = elements_per_classv[1]
+        else:
+             _, elements_val,_ = elements_per_classv
+        if args.novel.lower() in ["tieredimagenet", "cubfs"]:
+            _, _, elements_novel = elements_per_classn[2]
+        else:
+            _, _, elements_novel = elements_per_classn
+        num_classes = (num_classesb[0], num_classesv[1] , num_classesv[2] , (elements_train,elements_val ,elements_novel))
     else:
         elements_val, elements_novel = [elements_per_class] * val_classes, [elements_per_class] * novel_classes
         elements_train = None
