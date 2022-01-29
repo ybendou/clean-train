@@ -265,6 +265,7 @@ if args.base != "" and args.val != "" and args.novel != "":
     else:
         loadersn, input_shapen, num_classesn, few_shotn, top_5n = datasets.get_dataset(args.novel)
     loaders = (loadersb[0],loadersb[1], loadersv[2],loadersn[3])
+    loadersb,loadersv,loadersn=0,0,0
 
     if input_shapen != input_shapeb or input_shapen != input_shapev or few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n :
         print(input_shapen != input_shapeb , input_shapen != input_shapev , few_shotb != few_shotv , few_shotb != few_shotn , top_5b!=top_5v,top_5b!=top_5n )
@@ -292,7 +293,7 @@ if few_shot:
         else:
             elements_train = num_classesb[3]
         if args.val.lower() in ["tieredimagenet", "cubfs"]:
-             elements_val = num_classesv[3][1]
+            elements_val = num_classesv[3][1]
         else:
             elements_val  =  [num_classesv[3]] *val_classes
         if args.novel.lower() in ["tieredimagenet", "cubfs"]:
