@@ -249,6 +249,9 @@ def train_complete(model, loaders, mixup = False):
         return test_stats
 
 ### process main arguments
+if (args.dataset == '' and '' in [args.base , args.val, args.novel]) or (args.dataset != '' and ('' != args.base or '' != args.val or '' != args.novel)) :
+    raise("Do you want to do cross-domain ? if NO use --dataset ;  if YES --base --val --novel ; you cannot use both ; define which dataset you want after each argument")
+
 if args.dataset != "" :
     loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset(args.dataset)
 
@@ -267,9 +270,9 @@ if args.base != "" and args.val != "" and args.novel != "":
     loaders = (loadersb[0],loadersb[1], loadersv[2],loadersn[3])
     loadersb,loadersv,loadersn=0,0,0
 
-    if input_shapen != input_shapeb or input_shapen != input_shapev or few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n :
-        print(input_shapen != input_shapeb , input_shapen != input_shapev , few_shotb != few_shotv , few_shotb != few_shotn , top_5b!=top_5v,top_5b!=top_5n )
-        print('input_shapen != input_shapeb or input_shapen != input_shapev or few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n')
+    if  few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n :
+        print(few_shotb != few_shotv , few_shotb != few_shotn , top_5b!=top_5v,top_5b!=top_5n )
+        print('few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n')
         raise InputError('the cross domain needs the same input dimension of images')
     else:
         input_shape = input_shapeb
@@ -380,9 +383,10 @@ for i in range(args.runs):
     if not args.quiet:
         print(args)
     if args.wandb:
+        tag = (args.dataset != '')*args.dataset + (args.dataset == '')*('base-val-novel =' + args.base +' ' + args.val+' ' + args.novel)
         wandb.init(project="few-shot", 
             entity=args.wandb, 
-            tags=[f'run_{i}', args.dataset], 
+            tags=[f'run_{i}', tag], 
             notes=str(vars(args))
             )
         wandb.log({"run": i})

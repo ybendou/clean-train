@@ -36,6 +36,7 @@ python main.py --device cuda:012 --dataset miniimagenet --model S2M2R --lr -0.00
 
 ### hyperparameters
 parser.add_argument("--batch-size", type=int, default=64, help="batch size")
+parser.add_argument("--batch-fs", type=int, default=100, help="batch size for few shot runs")
 parser.add_argument("--feature-maps", type=int, default=64, help="number of feature maps")
 parser.add_argument("--lr", type=float, default="0.1", help="initial learning rate (negative is for Adam, e.g. -0.001)")
 parser.add_argument("--epochs", type=int, default=350, help="total number of epochs")
@@ -66,9 +67,9 @@ parser.add_argument("--skip-epochs", type=int, default="0", help="number of epoc
 parser.add_argument("--runs", type=int, default=1, help="number of runs")
 parser.add_argument("--quiet", action="store_true", help="prevent too much display of info")
 parser.add_argument("--dataset", type=str, default="", help="dataset to use")
-parser.add_argument("--base", type=str, default="CIFAR10", help="dataset to use to train")
-parser.add_argument("--val", type=str, default="CIFAR10", help="dataset to use to validate")
-parser.add_argument("--novel", type=str, default="CIFAR10", help="dataset to use to test")
+parser.add_argument("--base", type=str, default="", help="dataset to use to train")
+parser.add_argument("--val", type=str, default="", help="dataset to use to validate")
+parser.add_argument("--novel", type=str, default="", help="dataset to use to test")
 parser.add_argument("--dataset-size", type=int, default=-1, help="number of training samples (using a subset for classical classification, and reducing size of epochs for few-shot)")
 parser.add_argument("--output", type=str, default="", help="output file to write")
 parser.add_argument("--save-features", type=str, default="", help="save features to file")
