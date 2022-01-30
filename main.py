@@ -363,15 +363,25 @@ if args.test_features != "":
         filenames = args.test_features
     if isinstance(filenames, str):
         filenames = [filenames]
-    test_features = torch.cat([torch.load(fn, map_location=torch.device(args.device)).to(args.dataset_device) for fn in filenames], dim = 2)
-    print("Testing features of shape", test_features.shape)
-    train_features = test_features[:num_classes]
-    val_features = test_features[num_classes:num_classes + val_classes]
-    test_features = test_features[num_classes + val_classes:]
+    if args.dataset != '':
+        test_features = torch.cat([torch.load(fn, map_location=torch.device(args.device)).to(args.dataset_device) for fn in filenames], dim = 2)
+        print("Testing features of shape", test_features.shape)
+        train_features = test_features[:num_classes]
+        val_features = test_features[num_classes:num_classes + val_classes]
+        test_features = test_features[num_classes + val_classes:]
+    else:
+        test_features = torch.load(filenames[0], map_location=torch.device(args.device))
+        
+        train_features = test_features['base'].to(args.dataset_device)
+        val_features = test_features['val'].to(args.dataset_device)
+        test_features = test_features['novel'].to(args.dataset_device)
+        print("Testing features of shape", 'base', train_features.shape, 'val', val_features.shape, 'novel', test_features.shape)
+        print("if it fails please make sure --base --val --novel do correspond to the shapes above or (memory error) lower --batch-fs")
     if not args.transductive:
         for i in range(len(args.n_shots)):
             val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, test_features, few_shot_meta_data)
-            print("Inductive {:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
+            print("TEST Inductive {:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
+            print("VAL Inductive {:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * val_acc, 100 * val_conf))
     else:
         for i in range(len(args.n_shots)):
             val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, test_features, few_shot_meta_data, transductive = True)
