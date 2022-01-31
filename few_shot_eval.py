@@ -4,7 +4,7 @@ from args import *
 from utils import *
 
 n_runs = args.n_runs
-batch_few_shot_runs = 100
+batch_few_shot_runs = args.batch_fs
 assert(n_runs % batch_few_shot_runs == 0)
 
 def define_runs(n_ways, n_shots, n_queries, num_classes, elements_per_class):
@@ -184,7 +184,10 @@ def evaluate_shot(index, train_features, val_features, novel_features, few_shot_
                 else:
                     torch.save(model.module.state_dict(), args.save_model + str(args.n_shots[index]))
             if args.save_features != "":
-                torch.save(torch.cat([train_features, val_features, novel_features], dim = 0), args.save_features + str(args.n_shots[index]))
+                if args.base != '':
+                    torch.save({"base": train_features, "val": val_features, "novel": novel_features}, args.save_features + str(args.n_shots[index]))
+                else:
+                    torch.save(torch.cat([train_features, val_features, novel_features], dim = 0), args.save_features + str(args.n_shots[index]))
         few_shot_meta_data["best_val_acc"][index] = val_acc
         few_shot_meta_data["best_novel_acc"][index] = novel_acc
     return val_acc, val_conf, novel_acc, novel_conf

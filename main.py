@@ -249,15 +249,63 @@ def train_complete(model, loaders, mixup = False):
         return test_stats
 
 ### process main arguments
-loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset(args.dataset)
+if (args.dataset == '' and '' in [args.base , args.val, args.novel]) or (args.dataset != '' and ('' != args.base or '' != args.val or '' != args.novel)) :
+    raise("Do you want to do cross-domain ? if NO use --dataset ;  if YES --base --val --novel ; you cannot use both ; define which dataset you want after each argument")
+
+if args.dataset != "" :
+    loaders, input_shape, num_classes, few_shot, top_5 = datasets.get_dataset(args.dataset)
+
+if args.base != "" and args.val != "" and args.novel != "":
+    loadersb, input_shapeb, num_classesb, few_shotb, top_5b = datasets.get_dataset(args.base)
+    if args.base == args.val:
+        loadersv, input_shapev, num_classesv, few_shotv, top_5v  = loadersb, input_shapeb, num_classesb, few_shotb, top_5b
+    else:
+        loadersv, input_shapev, num_classesv, few_shotv, top_5v = datasets.get_dataset(args.val)
+    if args.base == args.novel:
+        loadersn, input_shapen, num_classesn, few_shotn, top_5n = loadersb, input_shapeb, num_classesb, few_shotb, top_5b
+    elif args.base != args.novel and args.val == args.novel :
+        loadersn, input_shapen, num_classesn, few_shotn, top_5n = loadersv, input_shapev, num_classesv, few_shotv, top_5v
+    else:
+        loadersn, input_shapen, num_classesn, few_shotn, top_5n = datasets.get_dataset(args.novel)
+    loaders = (loadersb[0],loadersb[1], loadersv[2],loadersn[3])
+    loadersb,loadersv,loadersn=0,0,0
+
+    if  few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n :
+        print(few_shotb != few_shotv , few_shotb != few_shotn , top_5b!=top_5v,top_5b!=top_5n )
+        print('few_shotb != few_shotv or few_shotb != few_shotn or top_5b!=top_5v or top_5b!=top_5n')
+        raise InputError('the cross domain needs the same input dimension of images')
+    else:
+        input_shape = input_shapeb
+        few_shot =few_shotb
+        top_5 = top_5b
+
+
 ### initialize few-shot meta data
 if few_shot:
-    num_classes, val_classes, novel_classes, elements_per_class = num_classes
+    if args.dataset != "":
+        num_classes, val_classes, novel_classes, elements_per_class = num_classes
     if args.dataset.lower() in ["tieredimagenet", "cubfs"]:
         elements_train, elements_val, elements_novel = elements_per_class
-    else:
+    elif args.dataset != "":
         elements_val, elements_novel = [elements_per_class] * val_classes, [elements_per_class] * novel_classes
         elements_train = None
+    elif args.base != "":
+        num_classes , val_classes , novel_classes = num_classesb[0] , num_classesv[1] ,num_classesn[2]
+        if args.base.lower() in ["tieredimagenet", "cubfs"]:
+            elements_train= num_classesb[3][0]
+        else:
+            elements_train = num_classesb[3]
+        if args.val.lower() in ["tieredimagenet", "cubfs"]:
+            elements_val = num_classesv[3][1]
+        else:
+            elements_val  =  [num_classesv[3]] *val_classes
+        if args.novel.lower() in ["tieredimagenet", "cubfs"]:
+            elements_novel = num_classesn[3][2]
+        else:
+            elements_novel = [num_classesn[3]]*novel_classes
+
+    
+
     print("Dataset contains",num_classes,"base classes,",val_classes,"val classes and",novel_classes,"novel classes.")
     print("Generating runs... ", end='')
 
@@ -315,15 +363,25 @@ if args.test_features != "":
         filenames = args.test_features
     if isinstance(filenames, str):
         filenames = [filenames]
-    test_features = torch.cat([torch.load(fn, map_location=torch.device(args.device)).to(args.dataset_device) for fn in filenames], dim = 2)
-    print("Testing features of shape", test_features.shape)
-    train_features = test_features[:num_classes]
-    val_features = test_features[num_classes:num_classes + val_classes]
-    test_features = test_features[num_classes + val_classes:]
+    if args.dataset != '':
+        test_features = torch.cat([torch.load(fn, map_location=torch.device(args.device)).to(args.dataset_device) for fn in filenames], dim = 2)
+        print("Testing features of shape", test_features.shape)
+        train_features = test_features[:num_classes]
+        val_features = test_features[num_classes:num_classes + val_classes]
+        test_features = test_features[num_classes + val_classes:]
+    else:
+        test_features = torch.load(filenames[0], map_location=torch.device(args.device))
+        
+        train_features = test_features['base'].to(args.dataset_device)
+        val_features = test_features['val'].to(args.dataset_device)
+        test_features = test_features['novel'].to(args.dataset_device)
+        print("Testing features of shape", 'base', train_features.shape, 'val', val_features.shape, 'novel', test_features.shape)
+        print("if it fails please make sure --base --val --novel do correspond to the shapes above or (memory error) lower --batch-fs")
     if not args.transductive:
         for i in range(len(args.n_shots)):
             val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, test_features, few_shot_meta_data)
-            print("Inductive {:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
+            print("TEST Inductive {:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * test_acc, 100 * test_conf))
+            print("VAL Inductive {:d}-shot: {:.2f}% (± {:.2f}%)".format(args.n_shots[i], 100 * val_acc, 100 * val_conf))
     else:
         for i in range(len(args.n_shots)):
             val_acc, val_conf, test_acc, test_conf = few_shot_eval.evaluate_shot(i, train_features, val_features, test_features, few_shot_meta_data, transductive = True)
@@ -335,9 +393,10 @@ for i in range(args.runs):
     if not args.quiet:
         print(args)
     if args.wandb:
+        tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['base' + args.base , 'val' + args.val,'novel' + args.novel]
         wandb.init(project="few-shot", 
             entity=args.wandb, 
-            tags=[f'run_{i}', args.dataset], 
+            tags=[f'run_{i}']+ tag, 
             notes=str(vars(args))
             )
         wandb.log({"run": i})
