@@ -393,10 +393,10 @@ for i in range(args.runs):
     if not args.quiet:
         print(args)
     if args.wandb:
-        tag = (args.dataset != '')*args.dataset + (args.dataset == '')*('base-val-novel =' + args.base +' ' + args.val+' ' + args.novel)
+        tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['base' + args.base , 'val' + args.val,'novel' + args.novel]
         wandb.init(project="few-shot", 
             entity=args.wandb, 
-            tags=[f'run_{i}', tag], 
+            tags=[f'run_{i}']+ tag, 
             notes=str(vars(args))
             )
         wandb.log({"run": i})
