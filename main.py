@@ -196,7 +196,16 @@ def train_complete(model, loaders, mixup = False):
             if lr < 0:
                 optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr)
             else:
-                optimizer = torch.optim.SGD(model.parameters(), lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
+                all_params = set(model.parameters())
+                wd_params = set()
+                for m in model.modules():
+                    try:
+                        _ = m.weight.shape
+                        wd_params.add(m.weight)
+                    except:
+                        pass
+                no_wd = all_params - wd_params
+                optimizer = torch.optim.SGD([{'params':list(wd_params)}, {'params':list(no_wd), 'weight_decay':0}], lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
             if args.cosine:
                 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones[0] * length)
                 lr = lr * args.gamma
