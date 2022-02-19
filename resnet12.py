@@ -30,12 +30,12 @@ class BasicBlockRN12(nn.Module):
     
 class ResNet12(nn.Module):
     def __init__(self, feature_maps, input_shape, num_classes, few_shot, rotations):
-        super(ResNet12, self).__init__()        
+        super(ResNet12, self).__init__()
         layers = []
         layers.append(BasicBlockRN12(input_shape[0], feature_maps))
         layers.append(BasicBlockRN12(feature_maps, int(2.5 * feature_maps)))
         layers.append(BasicBlockRN12(int(2.5 * feature_maps), 5 * feature_maps))
-        layers.append(BasicBlockRN12(5 * feature_maps, 10 * feature_maps))        
+        layers.append(BasicBlockRN12(5 * feature_maps, 10 * feature_maps))
         self.layers = nn.Sequential(*layers)
         self.linear = linear(10 * feature_maps, num_classes)
         self.rotations = rotations

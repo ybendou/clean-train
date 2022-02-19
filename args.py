@@ -13,7 +13,7 @@ python main.py --epochs 300 --dataset MNIST --dataset-size 6000 --model wideresn
 To train Fashion-MNIST with 96% accuracy (2 hours):
 python main.py --dataset fashion --mixup
 To train CIFAR10 with 95.90% accuracy (1 hour):
-python main.py --mixup
+python main.py --dataset cifar10 --mixup
 To train CIFAR100 with 78.55% accuracy (93.54% top-5) (1hour):
 python main.py --mixup --dataset cifar100
 To train CIFAR100 with 80.12% accuracy (94.70% top-5) (4h):

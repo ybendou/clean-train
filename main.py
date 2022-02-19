@@ -81,7 +81,7 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
             data[3*bs:] = data[3*bs:].transpose(3,2).flip(2)
             target_rot[3*bs:] = 3
 
-        if mixup and args.mm: # mixup or manifold_mixup
+        if mixup or args.mm: # mixup or manifold_mixup
             index_mixup = torch.randperm(data.shape[0])
             lam = random.random()            
             if args.mm:
