@@ -3,4 +3,5 @@ __pycache__/*
 notebooks/*
 .ipynb_checkpoints/*
 runs.sh
+run.sh
 *.log

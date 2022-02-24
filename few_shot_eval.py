@@ -130,18 +130,24 @@ def get_features(model, loader, dataset='train'):
         If data aug enabled, the data loader for val and novel is randomly augmenting images
     """
    
-    if args.n_augmentation>0 and dataset!='train':
+    if args.n_augmentation>0 and dataset!='train' and dataset!='val':
         normal_loader, augmented_loader = loader
         augmented_features = {'normal':get_features_(model, normal_loader)}
-        
+
+        feats = []
         for n in range(args.n_augmentation):
-            augmented_features[f'augmented_{n}']=get_features_(model, augmented_loader, augmentation_num=n, dataset=dataset)
+            print(f'----- Augmentation number:{n}')
+            feats.append(get_features_(model, augmented_loader, augmentation_num=n, dataset=dataset))
+
+        features_stacked = torch.stack(feats, dim=2)
+        augmented_features['augmented'] = features_stacked
+
         if args.save_augmented_features != "" and dataset=='novel':
             torch.save(augmented_features, args.save_augmented_features)
             
         return augmented_features
     else: 
-        return get_features_(model, loader)
+        return get_features_(model, loader[0])
 def get_features_(model, loader, augmentation_num=None, dataset='train'):
     model.eval()
     all_features, offset, max_offset = [], 100000, 0
@@ -175,16 +181,16 @@ def eval_few_shot(train_features, val_features, novel_features, val_run_classes,
         return transductive_ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), transductive_ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
     else:
         #return ncm(train_features, val_features, val_run_classes, val_run_indices, n_shots), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
-        return (0.99, 0.01), ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
+        return (0.99, 0.01), (0.99, 0.01) #ncm(train_features, novel_features, novel_run_classes, novel_run_indices, n_shots)
 
 
 def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_shot_meta_data):
 
     if "M" in args.preprocessing or args.save_features != '':
-        train_features = get_features(model, train_clean, dataset='train')
+        train_features = None #get_features(model, train_clean, dataset='train')
     else:
         train_features = torch.Tensor(0,0,0)
-    val_features = get_features(model, val_loader, dataset='val')
+    val_features = None #get_features(model, val_loader, dataset='val')
     novel_features = get_features(model, novel_loader, dataset='novel')
 
     res = []
@@ -194,7 +200,8 @@ def update_few_shot_meta_data(model, train_clean, novel_loader, val_loader, few_
     return res
 
 def evaluate_shot(index, train_features, val_features, novel_features, few_shot_meta_data, model = None, transductive = False):
-    (val_acc, val_conf), (novel_acc, novel_conf) = eval_few_shot(train_features, val_features, novel_features, few_shot_meta_data["val_run_classes"][index], few_shot_meta_data["val_run_indices"][index], few_shot_meta_data["novel_run_classes"][index], few_shot_meta_data["novel_run_indices"][index], args.n_shots[index], transductive = transductive)
+    (val_acc, val_conf), (novel_acc, novel_conf) = (0.1,0.1), (0.1,0.1)  #eval_few_shot(train_features, val_features, novel_features, few_shot_meta_data["val_run_classes"][index], few_shot_meta_data["val_run_indices"][index], few_shot_meta_data["novel_run_classes"][index], few_shot_meta_data["novel_run_indices"][index], args.n_shots[index], transductive = transductive)
+    
     if val_acc > few_shot_meta_data["best_val_acc"][index]:
         if val_acc > few_shot_meta_data["best_val_acc_ever"][index]:
             few_shot_meta_data["best_val_acc_ever"][index] = val_acc
