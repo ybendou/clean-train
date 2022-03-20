@@ -132,41 +132,47 @@ def get_features(model, loader, dataset='train'):
    
     if args.n_augmentation>0 and dataset!='train' and dataset!='val':
         normal_loader, augmented_loader = loader
-        augmented_features = {'normal':get_features_(model, normal_loader)}
+        # augmented_features = {'normal':get_features_(model, normal_loader)}
 
         feats = []
+        crops_params = []
         for n in range(args.n_augmentation):
             print(f'----- Augmentation number:{n}')
-            feats.append(get_features_(model, augmented_loader, augmentation_num=n, dataset=dataset))
+            features, params = get_features_(model, augmented_loader, augmentation_num=n, dataset=dataset)
+            feats.append(features)
+            crops_params.append(params)
 
-        features_stacked = torch.stack(feats, dim=2)
-        augmented_features['augmented'] = features_stacked
-
+        augmented_features = torch.stack(feats, dim=2)
+        crops_params = torch.stack(crops_params, dim=2)
         if args.save_augmented_features != "" and dataset=='novel':
             torch.save(augmented_features, args.save_augmented_features)
-            
+            torch.save(crops_params, args.save_augmented_features+'params')
+
         return augmented_features
     else: 
         return get_features_(model, loader[0])
 def get_features_(model, loader, augmentation_num=None, dataset='train'):
     model.eval()
-    all_features, offset, max_offset = [], 100000, 0
+    all_features, all_params, offset, max_offset = [], [], 100000, 0
     for batch_idx, (data, target) in enumerate(loader):        
         with torch.no_grad():
+            if dataset!='train':
+                data, params = data
+                all_params.append(params)
             data, target = data.to(args.device), target.to(args.device)
-            if args.save_images != '' and dataset=='novel': # only save cropped version for
-                if augmentation_num == None:
-                    save_folder = os.path.join(f'{args.save_images}', 'norma l')
-                    if not os.path.exists(save_folder): # create folder if not existing
-                        os.makedirs(save_folder)
-                    save_path = os.path.join(save_folder, f'images_{batch_idx}') 
-                else:
-                    save_folder = os.path.join(f'{args.save_images}', f'augment_{augmentation_num}')
-                    if not os.path.exists(save_folder):
-                        os.makedirs(save_folder)
-                    save_path = os.path.join(save_folder, f'images_{batch_idx}')
+            # if args.save_images != '' and dataset=='novel': # only save cropped version for
+            #     if augmentation_num == None:
+            #         save_folder = os.path.join(f'{args.save_images}', 'norma l')
+            #         if not os.path.exists(save_folder): # create folder if not existing
+            #             os.makedirs(save_folder)
+            #         save_path = os.path.join(save_folder, f'images_{batch_idx}') 
+            #     else:
+            #         save_folder = os.path.join(f'{args.save_images}', f'augment_{augmentation_num}')
+            #         if not os.path.exists(save_folder):
+            #             os.makedirs(save_folder)
+            #         save_path = os.path.join(save_folder, f'images_{batch_idx}')
 
-                torch.save({'target':target, 'data':data}, save_path)
+            #     torch.save({'target':target, 'data':data}, save_path)
 
             _, features = model(data)
             all_features.append(features)
@@ -174,7 +180,7 @@ def get_features_(model, loader, augmentation_num=None, dataset='train'):
             max_offset = max(max(target), max_offset)
     num_classes = max_offset - offset + 1
     print(".", end='')
-    return torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
+    return torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1]), torch.cat(all_params, dim=0).reshape(num_classes, -1, 4)
 
 def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False):
     if transductive:

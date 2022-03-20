@@ -6,7 +6,7 @@ import json
 import os
 
 class CPUDataset():
-    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False):
+    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False, generate_crops=False):
         self.data = data
         if torch.is_tensor(data):
             self.length = data.shape[0]
@@ -17,12 +17,23 @@ class CPUDataset():
         self.batch_size = batch_size
         self.transforms = transforms
         self.use_hd = use_hd
+        self.generate_crops = generate_crops
     def __getitem__(self, idx):
         if self.use_hd:
             elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB')))
         else:
             elt = self.data[idx]
-        return self.transforms(elt), self.targets[idx]
+        if self.generate_crops:
+            crop = self.transforms[0]
+            params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
+            elt = transforms.functional.crop(elt, *params)
+            elt = torch.nn.Sequential(*self.transforms[1:])(elt)
+            out = self.targets[idx]
+            return (elt, torch.Tensor(params).unsqueeze(0)), out
+
+        else:
+            return self.transforms(elt), self.targets[idx]
+
     def __len__(self):
         return self.length
 
@@ -128,9 +139,9 @@ class EpisodicDataset():
     def __len__(self):
         return self.n_batches
 
-def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False):
+def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False, generate_crops=False):
     if args.dataset_device == "cpu" or forcecpu:
-        dataset = CPUDataset(data, target, transforms, use_hd = use_hd)
+        dataset = CPUDataset(data, target, transforms, use_hd = use_hd, generate_crops=generate_crops)
         return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = min(8, os.cpu_count()))
     else:
         return Dataset(data, target, transforms, shuffle = shuffle)
@@ -331,20 +342,21 @@ def miniImageNet(use_hd = True):
         augmentations = []
         for augment in args.augmentations:
             if augment=='crop':
-                augmentations.append(transforms.RandomResizedCrop(84, scale=(0.2,0.5)))
+                augmentations.append(transforms.RandomResizedCrop(84))
+                augmentations.append(transforms.Resize([84, 84]))
                 print('Random Cropping')
-            if augment=='rotate':
-                augmentations.append(transforms.RandomRotation((-90,90)))
-                augmentations.append(transforms.CenterCrop(84))
+            # if augment=='rotate':
+            #     augmentations.append(transforms.RandomRotation((-90,90)))
+            #     augmentations.append(transforms.CenterCrop(84))
         
         augmentations.append(norm)
-        few_shot_loader = torch.nn.Sequential(*augmentations)
+        # few_shot_loader = torch.nn.Sequential(*augmentations)
  
         val_loader_normal = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
         test_loader_normal = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
         
-        val_loader_aug = iterator(datasets["validation"][0], datasets["validation"][1], transforms = few_shot_loader, forcecpu = True, shuffle = False, use_hd = use_hd)
-        test_loader_aug = iterator(datasets["test"][0], datasets["test"][1], transforms = few_shot_loader, forcecpu = True, shuffle = False, use_hd = use_hd)
+        val_loader_aug = iterator(datasets["validation"][0], datasets["validation"][1], transforms = augmentations, forcecpu = True, shuffle = False, use_hd = use_hd, generate_crops=True)
+        test_loader_aug = iterator(datasets["test"][0], datasets["test"][1], transforms = augmentations, forcecpu = True, shuffle = False, use_hd = use_hd, generate_crops=True)
         
         val_loader  = (val_loader_normal, val_loader_aug)
         test_loader = (test_loader_normal, test_loader_aug)
