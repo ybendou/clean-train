@@ -180,7 +180,7 @@ def get_features_(model, loader, augmentation_num=None, dataset='train'):
             max_offset = max(max(target), max_offset)
     num_classes = max_offset - offset + 1
     print(".", end='')
-    return torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1]), torch.cat(all_params, dim=0).reshape(num_classes, -1, 4)
+    return torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1]), torch.cat(all_params, dim=0).reshape(num_classes, -1, all_params[0].shape[-1])
 
 def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False):
     if transductive:

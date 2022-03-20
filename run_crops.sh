@@ -23,4 +23,5 @@ python main.py --dataset-path '/home/y17bendo/Documents/datasets/' --dataset min
 python main.py --dataset-path '/home/y17bendo/Documents/datasets/' --dataset miniimagenet --model resnet12 --batch-size 128 --epochs 0 --load-model '/ssd2/backbones/resnet12/miniimagenet/mini1.pt1' --n-augmentation 50 --save-augmented-features '/ssd2/data/AugmentedSamples/features/miniImagenet/AS1000/miniAS19backbone11.pt' --seed 373737;
 python main.py --dataset-path '/home/y17bendo/Documents/datasets/' --dataset miniimagenet --model resnet12 --batch-size 128 --epochs 0 --load-model '/ssd2/backbones/resnet12/miniimagenet/mini1.pt1' --n-augmentation 50 --save-augmented-features '/ssd2/data/AugmentedSamples/features/miniImagenet/AS1000/miniAS20backbone11.pt' --seed 646464;
 
+# python main.py --dataset-path '/home/y17bendo/Documents/datasets/' --dataset miniimagenet --model resnet12 --batch-size 128 --epochs 0 --load-model '/ssd2/backbones/resnet12/miniimagenet/mini1.pt1' --n-augmentation 2 --save-augmented-features '/ssd2/data/AugmentedSamples/features/miniImagenet/CropsAS200/CropsAS200_miniAS0backbone11.pt' --seed 989898;
 

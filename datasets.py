@@ -24,12 +24,13 @@ class CPUDataset():
         else:
             elt = self.data[idx]
         if self.generate_crops:
+            h, w = elt.shape[-2],  elt.shape[-1]
             crop = self.transforms[0]
             params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
             elt = transforms.functional.crop(elt, *params)
             elt = torch.nn.Sequential(*self.transforms[1:])(elt)
             out = self.targets[idx]
-            return (elt, torch.Tensor(params).unsqueeze(0)), out
+            return (elt, torch.Tensor([params[0], params[1], params[2], params[3], h, w]).unsqueeze(0)), out
 
         else:
             return self.transforms(elt), self.targets[idx]
