@@ -154,12 +154,12 @@ def get_features_(model, loader, augmentation_num=None, dataset='train'):
     for batch_idx, (data, target) in enumerate(loader):        
         with torch.no_grad():
             data, target = data.to(args.device), target.to(args.device)
-            if args.save_images != '' and dataset=='novel':
+            if args.save_images != '' and dataset=='novel': # only save cropped version for
                 if augmentation_num == None:
-                    save_folder = os.path.join(f'{args.save_images}', 'normal')
-                    if not os.path.exists(save_folder):
+                    save_folder = os.path.join(f'{args.save_images}', 'norma l')
+                    if not os.path.exists(save_folder): # create folder if not existing
                         os.makedirs(save_folder)
-                    save_path = os.path.join(save_folder, f'images_{batch_idx}')
+                    save_path = os.path.join(save_folder, f'images_{batch_idx}') 
                 else:
                     save_folder = os.path.join(f'{args.save_images}', f'augment_{augmentation_num}')
                     if not os.path.exists(save_folder):
