@@ -218,7 +218,7 @@ if __name__=='__main__':
     simplex_list, params_list = convert_array_simplex_features_to_list(AS_simplex_features, features_params, bounding_box_summits)  
 
     # Save the simplex features
-    save_summits_list = '/ssd2/data/AugmentedSamples/features/miniImagenet/boundingboxSimplex/AS1000_0123_noPrep_Simplex0.05/simplex_list'
+    save_summits_list = '/ssd2/data/AugmentedSamples/features/miniImagenet/boundingboxSimplex/AS1000_0123_noPrep_Simplex0.05/simplex_listInnerbb'
 
     print('Saving features')
     fastpickledump(simplex_list, save_summits_list+'.pickle')
