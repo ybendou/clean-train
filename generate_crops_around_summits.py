@@ -111,9 +111,9 @@ class CPUDataset():
 
         # If the sampling is not only outside the crop, we need to crop the crop again
         if not self.sample_outer_bb:
-            new_sampled_bb_params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
+            re_new_sampled_bb_params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
             elt = transforms.functional.crop(elt, *new_sampled_bb_params)
-            new_h, new_w, dh, dw, _, _ = new_sampled_bb_params.clone()
+            new_h, new_w, dh, dw, _, _ = re_new_sampled_bb_params
             h = new_h + h
             w = new_w + w
             
