@@ -221,10 +221,10 @@ if __name__=='__main__':
     # Save the simplex features
     save_summits_list = '/ssd2/data/AugmentedSamples/features/miniImagenet/boundingboxSimplex/AS1000_0123_noPrep_Simplex0.05/simplex_listInnerbb'
 
-    print('Saving features')
-    fastpickledump(simplex_list, save_summits_list+'.pickle')
+    # print('Saving features')
+    # fastpickledump(simplex_list, save_summits_list+'.pickle')
     
-    print('Saving params')
-    fastpickledump(params_list, save_summits_list+'params.pickle')
+    # print('Saving params')
+    # fastpickledump(params_list, save_summits_list+'params.pickle')
    
     print('The end')
