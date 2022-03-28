@@ -113,7 +113,7 @@ class CPUDataset():
         if not self.sample_outer_bb:
             re_new_sampled_bb_params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
             elt = transforms.functional.crop(elt, *re_new_sampled_bb_params)
-            new_h, new_w, dh, dw, _, _ = re_new_sampled_bb_params
+            new_h, new_w, dh, dw = re_new_sampled_bb_params
             h = new_h + h
             w = new_w + w
             
