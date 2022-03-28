@@ -346,12 +346,8 @@ def miniImageNet(use_hd = True):
                 augmentations.append(transforms.RandomResizedCrop(84))
                 augmentations.append(transforms.Resize([84, 84]))
                 print('Random Cropping')
-            # if augment=='rotate':
-            #     augmentations.append(transforms.RandomRotation((-90,90)))
-            #     augmentations.append(transforms.CenterCrop(84))
-        
+                
         augmentations.append(norm)
-        # few_shot_loader = torch.nn.Sequential(*augmentations)
  
         val_loader_normal = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
         test_loader_normal = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)

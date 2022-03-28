@@ -5,3 +5,4 @@ notebooks/*
 runs.sh
 run.sh
 *.log
+*.pickle

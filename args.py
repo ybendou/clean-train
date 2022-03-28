@@ -70,6 +70,9 @@ parser.add_argument("--save-features", type=str, default="", help="save features
 parser.add_argument("--save-model", type=str, default="", help="save model to file")
 parser.add_argument("--test-features", type=str, default="", help="test features and exit")
 parser.add_argument("--load-model", type=str, default="", help="load model from file")
+parser.add_argument("--bounding-box-file", type=str, default="", help="bounding box file for simplex summits")
+parser.add_argument("--save-summits-list", type=str, default="", help="path where to save the simplex summits list and parameters")
+
 parser.add_argument("--seed", type=int, default=-1, help="set random seed manually, and also use deterministic approach")
 parser.add_argument("--wandb", type=bool, default=False, help="Report to wandb")
 
