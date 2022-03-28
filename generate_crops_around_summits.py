@@ -9,6 +9,7 @@ from args import *
 import resnet12
 import pickle
 from PIL import Image
+import wandb
 from fstools.cropping_utils import sample_new_crop
 from fstools.utils import fastpickledump
 def miniImageNet(bounding_box_summits, use_hd = True, sample_outer_bb=True):
@@ -106,7 +107,7 @@ class CPUDataset():
 
         # Crop the original image with the new bounding box
         elt = transforms.functional.crop(elt, *new_sampled_bb_params[:4])
-        h, w, dh, dw, maxh, maxw = new_sampled_bb_params.clone()
+        h, w, dh, dw, maxh, maxw = new_sampled_bb_params
 
         # If the sampling is not only outside the crop, we need to crop the crop again
         if not self.sample_outer_bb:
