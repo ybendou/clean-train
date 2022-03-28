@@ -11,7 +11,7 @@ import pickle
 from PIL import Image
 from fstools.cropping_utils import sample_new_crop
 from fstools.utils import fastpickledump
-def miniImageNet(bounding_box_summits, use_hd = True):
+def miniImageNet(bounding_box_summits, use_hd = True, sample_outer_bb=True):
     """
         Get the features of the miniImageNet dataset
     """
@@ -52,11 +52,11 @@ def miniImageNet(bounding_box_summits, use_hd = True):
             print('Random Cropping')
             
     augmentations.append(norm)
-    test_loader_aug = iterator(datasets["test"][0], datasets["test"][1], transforms = augmentations, forcecpu = True, shuffle = False, use_hd = use_hd)
+    test_loader_aug = iterator(datasets["test"][0], datasets["test"][1], transforms = augmentations, forcecpu = True, shuffle = False, use_hd = use_hd, sample_outer_bb=sample_outer_bb)
 
     return test_loader_aug
 
-def iterator(data, bouding_boxes, transforms, forcecpu = False, shuffle = True, use_hd = False):
+def iterator(data, bouding_boxes, transforms, forcecpu = False, shuffle = True, use_hd = False, sample_outer_bb=True):
     """
     Get the iterator for the dataset
     Arguments:
@@ -66,17 +66,18 @@ def iterator(data, bouding_boxes, transforms, forcecpu = False, shuffle = True, 
         forcecpu: if True, use cpu
         shuffle: if True, shuffle the data
         use_hd: if True, use load images on hard disk
+        sample_outer_bb: if True, sample outside the bounding box
     Returns:
         the iterator
     """
-    dataset = CPUDataset(data, bouding_boxes, transforms, use_hd = use_hd)
+    dataset = CPUDataset(data, bouding_boxes, transforms, use_hd = use_hd, sample_outer_bb=sample_outer_bb)
     return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = min(8, os.cpu_count()))
 
 class CPUDataset():
     """
     Dataset class
     """
-    def __init__(self, data, bounding_boxes, transforms = [], batch_size = args.batch_size, use_hd = False):
+    def __init__(self, data, bounding_boxes, transforms = [], batch_size = args.batch_size, use_hd = False, sample_outer_bb=True):
         self.data = data
         if torch.is_tensor(data):
             self.length = data.shape[0]
@@ -87,6 +88,7 @@ class CPUDataset():
         self.batch_size = batch_size
         self.transforms = transforms
         self.use_hd = use_hd
+        self.sample_outer_bb = sample_outer_bb
     def __getitem__(self, idx):
         if self.use_hd:
             elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB')))
@@ -99,16 +101,25 @@ class CPUDataset():
         # Get the bounding box parameters of each summit
         bb_params = self.bounding_boxes[idx]
 
-        # Sample a random bounding box around each summit
-        new_sampled_bb_params = sample_new_crop(*bb_params.tolist(), scale=1.5)
+        # Sample a random bounding box around each summit, if sample_outer_bb is False, then the bounding box is a square around the summit
+        new_sampled_bb_params = sample_new_crop(*bb_params.tolist(), scale=1.5, deterministic=self.sample_outer_bb)
 
         # Crop the original image with the new bounding box
         elt = transforms.functional.crop(elt, *new_sampled_bb_params[:4])
+        h, w, dh, dw, maxh, maxw = new_sampled_bb_params.clone()
 
+        # If the sampling is not only outside the crop, we need to crop the crop again
+        if not self.sample_outer_bb:
+            new_sampled_bb_params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
+            elt = transforms.functional.crop(elt, *new_sampled_bb_params)
+            new_h, new_w, dh, dw, _, _ = new_sampled_bb_params.clone()
+            h = new_h + h
+            w = new_w + w
+            
         # Resize the image to 84x84
         elt = torch.nn.Sequential(*self.transforms[1:])(elt)
-
-        return elt, torch.Tensor([new_sampled_bb_params[0], new_sampled_bb_params[1], new_sampled_bb_params[2], new_sampled_bb_params[3], new_sampled_bb_params[4], new_sampled_bb_params[5]]).unsqueeze(0)
+        
+        return elt, torch.Tensor([h, w, dh, dw, maxh, maxw]).unsqueeze(0)
 
     def __len__(self):
         return self.length
@@ -171,7 +182,7 @@ if __name__=='__main__':
     with open(args.bounding_box_file, 'rb') as pickle_file:
         bounding_box_summits = pickle.load(pickle_file)
    
-    load = True
+    load = False
     if load : 
         augmented_simplex_path = '/ssd2/data/AugmentedSamples/features/miniImagenet/boundingboxSimplex/AS1000_0123_noPrep_Simplex0.05/features0.pt'
         augmented_simplex_params_path = '/ssd2/data/AugmentedSamples/features/miniImagenet/boundingboxSimplex/AS1000_0123_noPrep_Simplex0.05/features0.ptparams'
@@ -181,8 +192,14 @@ if __name__=='__main__':
 
         print('Features loaded')
     else:
+        # Initiate wandb project
+        if args.wandb:
+            wandb.init(project="miniImagenet_boundingboxSimplex", name="Generate_boundingboxSimplex_features", 
+                        config=args, entity=args.wandb,
+                        notes='Generate boundingboxSimplex features for the miniImagenet dataset, sample crops around the closest crop to each summit of the simplex')
+
         # Get the loaders
-        novel_loader = miniImageNet(bounding_box_summits)
+        novel_loader = miniImageNet(bounding_box_summits, sample_outer_bb=args.sample_outer_bb)
 
         # Get the model 
         model = resnet12.ResNet12(args.feature_maps, [3, 84, 84], 64, True, args.rotations).to(args.device)
@@ -202,11 +219,6 @@ if __name__=='__main__':
 
     # Save the simplex features
     save_summits_list = '/ssd2/data/AugmentedSamples/features/miniImagenet/boundingboxSimplex/AS1000_0123_noPrep_Simplex0.05/simplex_list'
-
-    # with open(save_summits_list+'.pickle', 'wb') as handle:
-    #     pickle.dump(simplex_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    # with open(save_summits_list+'params.pickle', 'wb') as handle:
-    #     pickle.dump(params_list, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     print('Saving features')
     fastpickledump(simplex_list, save_summits_list+'.pickle')
