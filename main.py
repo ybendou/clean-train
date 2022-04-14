@@ -409,8 +409,8 @@ for i in range(args.runs):
             config=vars(args)
             )
         wandb.log({"run": i})
-        wandb.log({'base': args.base, 'val': args.val , 'novel': args.novel, 'run' : i })
-        wandb.log({'rmclass': args.rmclass })
+        #wandb.log({'base': args.base, 'val': args.val , 'novel': args.novel, 'run' : i })
+        #wandb.log({'rmclass': args.rmclass })
     model = create_model()
     if args.ema > 0:
         ema = ExponentialMovingAverage(model.parameters(), decay=args.ema)
