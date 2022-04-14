@@ -403,10 +403,10 @@ for i in range(args.runs):
         print(args)
     if args.wandb:
         tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['cross-domain']
-        wandb.init(project="few-shot", 
+        wandb.init(project=args.wandb_project_name, 
             entity=args.wandb, 
             tags=tag, 
-            notes=str(vars(args))
+            config=vars(args)
             )
         wandb.log({"run": i})
         wandb.log({'base': args.base, 'val': args.val , 'novel': args.novel, 'run' : i })
