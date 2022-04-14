@@ -403,7 +403,7 @@ for i in range(args.runs):
         print(args)
     if args.wandb:
         tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['cross-domain']
-        wandb.init(project=args.wandb_project_name, 
+        wandb.init(project=args.wandbProjectName, 
             entity=args.wandb, 
             tags=tag, 
             config=vars(args)
