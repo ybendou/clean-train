@@ -33,15 +33,27 @@ if args.wandb:
 last_update, criterion = 0, torch.nn.CrossEntropyLoss()
 
 ### function to either use criterion based on output and target or criterion_episodic based on features and target
-def crit(output, features, target):
+def crit(output, features, target, weightCE=False, epoch=0, model=None):
     if args.episodic:
         return criterion_episodic(features, target)
     else:
         if args.label_smoothing > 0:
             criterion = LabelSmoothingLoss(num_classes = num_classes, smoothing = args.label_smoothing)
+            return criterion(output, target)
         else:
-            criterion = torch.nn.CrossEntropyLoss()
-        return criterion(output, target)
+            if weightCE:
+                criterion = torch.nn.CrossEntropyLoss(reduction='none')
+                T = epoch/(args.epochs + args.manifold_mixup)
+                output_d = F.softmax(output.detach(), dim=1)
+                probas = torch.stack([output_d[b, target[b]] for b in range(output_d.shape[0])])
+                average_probas_classes = torch.Tensor([model.mean_probas_classes[c] for c in target])
+                prior = probas/(average_probas_classes+10e-5).to(args.device)
+                #print(T, probas, average_probas_classes)
+                loss = criterion(output, target)*(1-T+T*prior)
+                return loss.mean()                
+            else:
+                criterion = torch.nn.CrossEntropyLoss()
+                return criterion(output, target)
 
 ### main train function
 def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = False):
@@ -91,16 +103,16 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
                 output, features = model(data_mixed)
             if args.rotations:
                 output, output_rot = output
-                loss = ((lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])) + (lam * crit(output_rot, features, target_rot) + (1 - lam) * crit(output_rot, features, target_rot[index_mixup]))) / 2
+                loss = ((lam * crit(output, features, target, weightCE=True, epoch=epoch, model=model) + (1 - lam) * crit(output, features, target[index_mixup])) + (lam * crit(output_rot, features, target_rot) + (1 - lam) * crit(output_rot, features, target_rot[index_mixup]))) / 2
             else:
-                loss = lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])
+                loss = lam * crit(output, features, target, weightCE=True, epoch=epoch, model=model) + (1 - lam) * crit(output, features, target[index_mixup])
         else:
-            output, features = model(data)
+            output, features = model(data, target=target, track_class_probas=True)
             if args.rotations:
                 output, output_rot = output
-                loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
+                loss = 0.5 * crit(output, features, target, weightCE=True, epoch=epoch, model=model) + 0.5 * crit(output_rot, features, target_rot)                
             else:
-                loss = crit(output, features, target)
+                loss = crit(output, features, target, weightCE=True, epoch=epoch, model=model)
 
         # backprop loss
         loss.backward()
@@ -129,7 +141,9 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
             break
             
     if args.wandb:
-        wandb.log({"epoch":epoch, "train_loss": losses / total})
+        wandb.log({"epoch":epoch, "train_loss": losses / total, "T":epoch/(args.epochs + args.manifold_mixup), 
+                "mean_probas":wandb.Histogram(model.mean_probas_classes)    
+                })
 
     # return train_loss
     return { "train_loss" : losses / total}

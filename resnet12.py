@@ -41,6 +41,9 @@ class ResNet12(nn.Module):
         self.rotations = rotations
         self.linear_rot = linear(10 * feature_maps, 4)
         self.mp = nn.MaxPool2d((2,2))
+        self.bnn_classes=[nn.BatchNorm1d(1, affine=False).cuda() for c in range(num_classes)]
+        self.num_classes = num_classes
+        self.mean_probas_classes= [0]*num_classes
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
@@ -48,7 +51,7 @@ class ResNet12(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    def forward(self, x, index_mixup = None, lam = -1):
+    def forward(self, x, index_mixup = None, lam = -1, target=None, track_class_probas=False):
         if lam != -1:
             mixup_layer = random.randint(0, 3)
         else:
@@ -64,6 +67,16 @@ class ResNet12(nn.Module):
         out = F.avg_pool2d(out, out.shape[2])
         features = out.view(out.size(0), -1)
         out = self.linear(features)
+        if target!=None and track_class_probas:
+            # get mean of probas per class using the batchnorms
+            probas = F.softmax(out, dim=1)
+            for c in range(self.num_classes):
+                if c in target:
+                    c_proba = probas[torch.where(target==c)][:,c].unsqueeze(1)
+                    if c_proba.shape[0]==1: # quick hack for when nb of samples is 1
+                        c_proba = c_proba.repeat(2,1)
+                    _ = self.bnn_classes[c](c_proba)
+            self.mean_probas_classes = [self.bnn_classes[c].running_mean for c in range(self.num_classes)]
         if self.rotations:
             out_rot = self.linear_rot(features)
             return (out, out_rot), features
