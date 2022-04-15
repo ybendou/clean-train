@@ -142,7 +142,7 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
             
     if args.wandb:
         wandb.log({"epoch":epoch, "train_loss": losses / total, "T":epoch/(args.epochs + args.manifold_mixup), 
-                "mean_probas":wandb.Histogram(model.mean_probas_classes)    
+                "mean_probas":wandb.Histogram(torch.Tensor(model.mean_probas_classes).cpu())    
                 })
 
     # return train_loss
