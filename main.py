@@ -100,19 +100,19 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
                 output, features = model(data, index_mixup = index_mixup, lam = lam)
             else:
                 data_mixed = lam * data + (1 - lam) * data[index_mixup]
-                output, features = model(data_mixed)
+                output, features = model(data_mixed, target=target, track_class_probas=True)
             if args.rotations:
                 output, output_rot = output
-                loss = ((lam * crit(output, features, target, weightCE=True, epoch=epoch, model=model) + (1 - lam) * crit(output, features, target[index_mixup])) + (lam * crit(output_rot, features, target_rot) + (1 - lam) * crit(output_rot, features, target_rot[index_mixup]))) / 2
+                loss = ((lam * crit(output, features, target, weightCE=args.weightCE, epoch=epoch, model=model) + (1 - lam) * crit(output, features, target[index_mixup])) + (lam * crit(output_rot, features, target_rot) + (1 - lam) * crit(output_rot, features, target_rot[index_mixup]))) / 2
             else:
-                loss = lam * crit(output, features, target, weightCE=True, epoch=epoch, model=model) + (1 - lam) * crit(output, features, target[index_mixup])
+                loss = lam * crit(output, features, target, weightCE=args.weightCE, epoch=epoch, model=model) + (1 - lam) * crit(output, features, target[index_mixup])
         else:
             output, features = model(data, target=target, track_class_probas=True)
             if args.rotations:
                 output, output_rot = output
-                loss = 0.5 * crit(output, features, target, weightCE=True, epoch=epoch, model=model) + 0.5 * crit(output_rot, features, target_rot)                
+                loss = 0.5 * crit(output, features, target, weightCE=args.weightCE, epoch=epoch, model=model) + 0.5 * crit(output_rot, features, target_rot)                
             else:
-                loss = crit(output, features, target, weightCE=True, epoch=epoch, model=model)
+                loss = crit(output, features, target, weightCE=args.weightCE, epoch=epoch, model=model)
 
         # backprop loss
         loss.backward()
