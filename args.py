@@ -55,6 +55,7 @@ parser.add_argument("--postprocessing", type=str, default="", help="postprocessi
 parser.add_argument("--manifold-mixup", type=int, default="0", help="deploy manifold mixup as fine-tuning as in S2M2R for the given number of epochs")
 parser.add_argument("--temperature", type=float, default=1., help="multiplication factor before softmax when using episodic")
 parser.add_argument("--ema", type=float, default=0, help="use exponential moving average with specified decay (default, 0 which means do not use)")
+parser.add_argument("--weightCE", action="store_true", help="use a weighted Cross entropy based on confidence of softmax")
 
 ### pytorch options
 parser.add_argument("--device", type=str, default="cuda:0", help="device(s) to use, for multiple GPUs try cuda:ijk, will not work with 10+ GPUs")
