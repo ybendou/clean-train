@@ -280,7 +280,7 @@ def cifarfs(use_hd=True, data_augmentation=True):
 
     image_size = 32
     norm = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size), 
+    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(image_size, scale=(0.5, 1.0)), 
                                            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), 
                                            transforms.RandomHorizontalFlip(), 
                                            norm)
