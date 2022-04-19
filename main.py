@@ -303,7 +303,7 @@ if few_shot:
         if args.base.lower() in ["tieredimagenet", "cubfs"]:
             elements_train= num_classesb[3][0]
         else:
-            elements_train = num_classesb[3]
+            elements_train = None
         if args.val.lower() in ["tieredimagenet", "cubfs"]:
             elements_val = num_classesv[3][1]
         else:
