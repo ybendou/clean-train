@@ -238,8 +238,12 @@ def train_complete(model, loaders, mixup = False):
                 test_stats = test(model, test_loader)
                 if top_5:
                     print("top-1: {:.2f}%, top-5: {:.2f}%".format(100 * test_stats["test_acc"], 100 * test_stats["test_acc_top_5"]))
+                    if args.wandb:
+                        wandb.log({'epoch':epoch, f'top-1':test_stats["test_acc"], f'top-5':test_stats["test_acc_top_5"]})
                 else:
                     print("test acc: {:.2f}%".format(100 * test_stats["test_acc"]))
+                    if args.wandb:
+                        wandb.log({'epoch':epoch, f'test-acc':test_stats["test_acc"]})
 
     if args.epochs + args.manifold_mixup <= args.skip_epochs:
         if few_shot:
@@ -450,8 +454,10 @@ for i in range(args.runs):
                 wandb.log({"run": i+1,"test acc {:d}-shot".format(args.n_shots[index]):np.mean(np.array(run_stats["best_novel_acc"])[:,index])})
     else:
         stats(run_stats["test_acc"], "Top-1")
+        wandb.log({"run": i+1,"Top-1":np.mean(np.array(run_stats["test_acc"]))})
         if top_5:
             stats(run_stats["test_acc_top_5"], "Top-5")
+            wandb.log({"run": i+1,"Top-5":np.mean(np.array(run_stats["test_acc_top_5"]))})
 
 if args.output != "":
     f = open(args.output, "a")
