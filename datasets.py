@@ -245,7 +245,7 @@ def miniImageNet_standardTraining(use_hd = True, ratio=92/84):
     count = 0
     target = []
     data = []
-
+    nb_element_per_class = 600
     # Retrieve images and their classes
     for subset in ["train", "validation", "test"]:
         with open(args.dataset_path + "miniimagenetimages/" + subset + ".csv", "r") as f:
