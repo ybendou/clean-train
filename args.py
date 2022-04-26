@@ -96,6 +96,10 @@ parser.add_argument("--transductive", action="store_true", help ="test features 
 parser.add_argument("--transductive-n-iter-softkmeans", type=int, default=200, help="number of iterations for few-shot transductive")
 parser.add_argument("--transductive-temperature-softkmeans", type=float, default=5, help="temperature for few-shot transductive is using softkmeans")
 
+# Resizing input options
+parser.add_argument("--filter-crops", action="store_true", help="filter crops based on if they contain the object")
+
+
 try :
     get_ipython()
     args = parser.parse_args(args=[])
