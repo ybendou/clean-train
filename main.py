@@ -135,7 +135,7 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
     return { "train_loss" : losses / total}
 
 # function to compute accuracy in the case of standard classification
-def test(model, test_loader):
+def test(model, test_loader, epoch=0):
     model.eval()
     test_loss, accuracy, accuracy_top_5, total = 0, 0, 0, 0
     
@@ -166,7 +166,7 @@ def test(model, test_loader):
     model.train()
     
     if args.wandb:
-        wandb.log({ "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total})
+        wandb.log({ "epoch": epoch, "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total})
 
     return { "test_loss" : test_loss / total, "test_acc" : accuracy / total, "test_acc_top_5" : accuracy_top_5 / total}
 
@@ -235,7 +235,7 @@ def train_complete(model, loaders, mixup = False):
 
                 print()
             else:
-                test_stats = test(model, test_loader)
+                test_stats = test(model, test_loader, epoch=epoch)
                 if top_5:
                     print("top-1: {:.2f}%, top-5: {:.2f}%".format(100 * test_stats["test_acc"], 100 * test_stats["test_acc_top_5"]))
                     if args.wandb:
