@@ -238,6 +238,57 @@ def cifar100(data_augmentation = True):
 
 from PIL import Image
 
+
+def miniImageNet_standardTraining(use_hd = True, ratio=92/84):
+    datasets = {}
+    classes = []
+    count = 0
+    target = []
+    data = []
+
+    # Retrieve images and their classes
+    for subset in ["train", "validation", "test"]:
+        with open(args.dataset_path + "miniimagenetimages/" + subset + ".csv", "r") as f:
+            start = 0
+            for line in f:
+                if start == 0:
+                    start += 1
+                else:
+                    splits = line.split(",")
+                    fn, c = splits[0], splits[1]
+                    if c not in classes:
+                        classes.append(c)
+                    count += 1
+                    target.append(len(classes) - 1)
+                    path = args.dataset_path + "miniimagenetimages/" + "images/" + fn
+                    if not use_hd:
+                        image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
+                        data.append(image)
+                    else:
+                        data.append(path)
+    # Split each class to train and test 
+    train = [[], []]
+    test = [[], []]
+    for c in range(len(classes)):
+        train[0] = train[0]+data[nb_element_per_class*c:nb_element_per_class*c+500]
+        train[1] = train[1]+target[nb_element_per_class*c:nb_element_per_class*c+500]
+        test[0] = test[0]+data[nb_element_per_class*c+500:nb_element_per_class*(c+1)]
+        test[1] = test[1]+target[nb_element_per_class*c+500:nb_element_per_class*(c+1)]
+        
+    datasets['train'] = [train[0], torch.LongTensor(train[1])]
+    datasets['test'] = [test[0], torch.LongTensor(test[1])]
+
+    print()
+    norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
+    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
+    all_transforms = torch.nn.Sequential(transforms.Resize(int(ratio*args.input_size)), transforms.CenterCrop(args.input_size), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(args.input_size), norm)
+    
+    train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
+    val_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    return (train_loader, val_loader, test_loader), [3, args.input_size, args.input_size], len(classes), False, True
+
+
 def cifarfs(use_hd=True, data_augmentation=True):
     """
     CIFAR FS dataset
@@ -338,6 +389,7 @@ def miniImageNet(use_hd = True, ratio=92/84):
     val_loader = iterator(datasets["validation"][0], datasets["validation"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     return (train_loader, train_clean, val_loader, test_loader), [3, args.input_size, args.input_size], (64, 16, 20, 600), True, False
+
 
 
 def tieredImageNet(use_hd=True):
@@ -617,6 +669,8 @@ def get_dataset(dataset_name):
         return tieredImageNet()
     elif dataset_name.lower() == "fc100":
         return fc100()
+    elif dataset_name.lower() == 'miniimagenetstandard':
+        return miniImageNet_standardTraining()
     else:
         print("Unknown dataset!")
 
