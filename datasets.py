@@ -69,7 +69,7 @@ class CPUDataset():
         else:
             elt = self.data[idx]
         if self.crop_sampler:
-            elt = select_crop(elt, transformations, self.closest_crops[idx])
+            elt = select_crop(elt, self.transformations, self.closest_crops[idx])
         else:
             elt = self.transforms(elt)
         return elt, self.targets[idx]
