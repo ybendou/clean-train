@@ -5,8 +5,51 @@ import torch
 import json
 import os
 
+
+def normalized_bb_intersection_over_union(boxAA, boxBB):
+    """
+    
+    """
+    boxA = boxAA.clone()
+    boxB = boxBB.clone()
+    boxA[2] = boxA[0]+boxA[2]
+    boxA[3] = boxA[1]+boxA[3] 
+    boxB[2] = boxB[0]+boxB[2]
+    boxB[3] = boxB[1]+boxB[3]
+    
+    # (x1, y1, x2, y2)
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+    # compute the area of intersection rectangle
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    # compute the area of both the prediction and ground-truth
+    # rectangles
+    boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+    boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+    # compute the intersection over union by taking the intersection
+    # area and dividing it by the sum of prediction + ground-truth
+    # areas - the interesection area
+    iou = interArea / float(min(boxAArea, boxBArea))
+    # return the intersection over union value
+    return iou
+
+def crop_resize_rescale_image(elt, transformations, closest_crop):
+    h, w = elt.shape[-2],  elt.shape[-1]
+    crop = transformations[0]
+    params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
+    NIOU = normalized_bb_intersection_over_union(closest_crop, params)
+    while NIOU < args.niou_treshold:
+        params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
+        NIOU = normalized_bb_intersection_over_union(closest_crop, params)
+    elt = transforms.functional.crop(elt, *params)
+    elt = torch.nn.Sequential(*transformations[1:])(elt)
+    return elt
+
 class CPUDataset():
-    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False):
+    def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False, crop_sampler=False):
         self.data = data
         if torch.is_tensor(data):
             self.length = data.shape[0]
@@ -17,12 +60,19 @@ class CPUDataset():
         self.batch_size = batch_size
         self.transforms = transforms
         self.use_hd = use_hd
+        self.crop_sampler = crop_sampler
+        if self.crop_sampler:
+            self.closest_crops = torch.load(args.closest_crops, map_location='cpu').reshape(100, 600, -1)[:, :500].reshape(100*500, -1)
     def __getitem__(self, idx):
         if self.use_hd:
             elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB')))
         else:
             elt = self.data[idx]
-        return self.transforms(elt), self.targets[idx]
+        if self.crop_sampler:
+            elt = select_crop(elt, transformations, self.closest_crops[idx])
+        else:
+            elt = self.transforms(elt)
+        return elt, self.targets[idx]
     def __len__(self):
         return self.length
         
@@ -128,9 +178,9 @@ class EpisodicDataset():
     def __len__(self):
         return self.n_batches
 
-def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False):
+def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False, crop_sampler=False):
     if args.dataset_device == "cpu" or forcecpu:
-        dataset = CPUDataset(data, target, transforms, use_hd = use_hd)
+        dataset = CPUDataset(data, target, transforms, use_hd = use_hd, crop_sampler=crop_sampler)
         return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = min(8, os.cpu_count()))
     else:
         return Dataset(data, target, transforms, shuffle = shuffle)
@@ -280,12 +330,15 @@ def miniImageNet_standardTraining(use_hd = True, ratio=92/84):
 
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
-    train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
+    if args.crop_sampler:
+        train_transforms = [transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm]
+    else:
+        train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
     all_transforms = torch.nn.Sequential(transforms.Resize(int(ratio*args.input_size)), transforms.CenterCrop(args.input_size), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(args.input_size), norm)
     
-    train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
-    val_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+    train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd, crop_sampler=args.crop_sampler)
+    val_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, crop_sampler=False)
+    test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, crop_sampler=False)
     return (train_loader, val_loader, test_loader), [3, args.input_size, args.input_size], len(classes), False, True
 
 
