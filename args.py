@@ -98,7 +98,7 @@ parser.add_argument("--transductive-temperature-softkmeans", type=float, default
 
 # Resizing input options
 parser.add_argument("--closest-crops", type=str, default="", help="file of closest crops to centroids of each class")
-parser.add_argument("--crops-sampler", action="store_true", help="sample crops based on if they contain the object")
+parser.add_argument("--crop-sampler", action="store_true", help="sample crops based on if they contain the object")
 parser.add_argument("--niou-treshold", type=float, default=0.6, help="threshold to accept a crop based on its normalized IOU")
 
 
