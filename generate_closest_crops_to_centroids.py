@@ -225,4 +225,4 @@ for i in tqdm(range(len(datasets[0]))):
     closest_crops.append(best_params)
 closest_crops = torch.cat(closest_crops)
 
-torch.save(closest_crops, '/users/local/y17bendo/data/features/miniImagenet/changing_input_size/standardTrainingFeatures/closest_crops_standard_training.pt')
+torch.save(closest_crops, '/users/local/y17bendo/data/AugmentedSamples/features/miniImagenet/changing_input_size/standardTrainingFeatures/closest_crops_standard_training.pt')

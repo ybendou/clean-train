@@ -36,7 +36,7 @@ def normalized_bb_intersection_over_union(boxAA, boxBB):
     # return the intersection over union value
     return iou
 
-def crop_resize_rescale_image(elt, transformations, closest_crop):
+def select_crop(elt, transformations, closest_crop):
     h, w = elt.shape[-2],  elt.shape[-1]
     crop = transformations[0]
     params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
