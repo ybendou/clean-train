@@ -10,8 +10,8 @@ def normalized_bb_intersection_over_union(boxAA, boxBB):
     """
     
     """
-    boxA = boxAA.clone()
-    boxB = boxBB.clone()
+    boxA = [boxAA[0], boxAA[1], boxAA[2], boxAA[3]]
+    boxB = [boxBB[0], boxBB[1], boxBB[2], boxBB[3]]
     boxA[2] = boxA[0]+boxA[2]
     boxA[3] = boxA[1]+boxA[3] 
     boxB[2] = boxB[0]+boxB[2]
@@ -69,7 +69,7 @@ class CPUDataset():
         else:
             elt = self.data[idx]
         if self.crop_sampler:
-            elt = select_crop(elt, self.transformations, self.closest_crops[idx])
+            elt = select_crop(elt, self.transforms, self.closest_crops[idx])
         else:
             elt = self.transforms(elt)
         return elt, self.targets[idx]
@@ -331,7 +331,7 @@ def miniImageNet_standardTraining(use_hd = True, ratio=92/84):
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     if args.crop_sampler:
-        train_transforms = [transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm]
+        train_transforms = [transforms.RandomResizedCrop(84), transforms.Resize([int(ratio*args.input_size), int(ratio*args.input_size)]), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm]
     else:
         train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
     all_transforms = torch.nn.Sequential(transforms.Resize(int(ratio*args.input_size)), transforms.CenterCrop(args.input_size), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(args.input_size), norm)
