@@ -32,7 +32,9 @@ def normalized_bb_intersection_over_union(boxAA, boxBB):
     # compute the intersection over union by taking the intersection
     # area and dividing it by the sum of prediction + ground-truth
     # areas - the interesection area
-    iou = interArea / float(min(boxAArea, boxBArea))
+    #iou = interArea / float(min(boxAArea, boxBArea))
+    iou = interArea / float(boxAArea)
+    
     # return the intersection over union value
     return iou
 
@@ -41,12 +43,14 @@ def select_crop(elt, transformations, closest_crop):
     crop = transformations[0]
     params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
     NIOU = normalized_bb_intersection_over_union(closest_crop, params)
+    counter = 1
     while NIOU < args.niou_treshold:
         params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
         NIOU = normalized_bb_intersection_over_union(closest_crop, params)
+        counter += 1
     elt = transforms.functional.crop(elt, *params)
     elt = torch.nn.Sequential(*transformations[1:])(elt)
-    return elt
+    return elt, counter
 
 class CPUDataset():
     def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False, crop_sampler=False):
@@ -69,10 +73,11 @@ class CPUDataset():
         else:
             elt = self.data[idx]
         if self.crop_sampler:
-            elt = select_crop(elt, self.transforms, self.closest_crops[idx])
+            elt, counter = select_crop(elt, self.transforms, self.closest_crops[idx])
+            return elt, self.targets[idx], counter
         else:
             elt = self.transforms(elt)
-        return elt, self.targets[idx]
+            return elt, self.targets[idx]
     def __len__(self):
         return self.length
         

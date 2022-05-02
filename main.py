@@ -48,11 +48,11 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
     model.train()
     global last_update
     losses, total = 0., 0
-    
-    for batch_idx, (data, target) in enumerate(train_loader):
+    counter_tracker = []
+    for batch_idx, (data, target, counter) in enumerate(train_loader):
             
         data, target = data.to(args.device), target.to(args.device)
-
+        counter_tracker += counter.reshape(-1).detach().cpu().tolist()
         # reset gradients
         optimizer.zero_grad()
 
@@ -129,7 +129,7 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
             break
             
     if args.wandb:
-        wandb.log({"epoch":epoch, "train_loss": losses / total})
+        wandb.log({"epoch":epoch, "train_loss": losses / total, "counter":np.array(counter_tracker).mean()}, "counter_list": counter_tracker, "counter_hist":wandb.Histogram(torch.Tensor(counter_tracker).cpu()))
 
     # return train_loss
     return { "train_loss" : losses / total}
