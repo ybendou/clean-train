@@ -41,11 +41,11 @@ def normalized_bb_intersection_over_union(boxAA, boxBB):
 def select_crop(elt, transformations, closest_crop):
     h, w = elt.shape[-2],  elt.shape[-1]
     crop = transformations[0]
-    params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
+    params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
     NIOU = normalized_bb_intersection_over_union(closest_crop, params)
     counter = 1
     while NIOU < args.niou_treshold:
-        params = crop.get_params(elt, scale=(0.14,1), ratio=(0.75, 1.333333)) # sample some parameter
+        params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
         NIOU = normalized_bb_intersection_over_union(closest_crop, params)
         counter += 1
     elt = transforms.functional.crop(elt, *params)
