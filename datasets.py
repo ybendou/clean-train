@@ -32,9 +32,10 @@ def normalized_bb_intersection_over_union(boxAA, boxBB):
     # compute the intersection over union by taking the intersection
     # area and dividing it by the sum of prediction + ground-truth
     # areas - the interesection area
-    #iou = interArea / float(min(boxAArea, boxBArea))
-    iou = interArea / float(boxAArea)
-    
+    if args.niou_asymmetric:
+        iou = interArea / float(boxAArea)
+    else:
+        iou = interArea / float(min(boxAArea, boxBArea))
     # return the intersection over union value
     return iou
 
