@@ -129,7 +129,7 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
             break
             
     if args.wandb:
-        wandb.log({"epoch":epoch, "train_loss": losses / total, "counter":np.array(counter_tracker).mean()}, "counter_list": counter_tracker, "counter_hist":wandb.Histogram(torch.Tensor(counter_tracker).cpu()))
+        wandb.log({"epoch":epoch, "train_loss": losses / total, "counter":np.array(counter_tracker).mean(), "counter_list": counter_tracker, "counter_hist":wandb.Histogram(torch.Tensor(counter_tracker).cpu())})
 
     # return train_loss
     return { "train_loss" : losses / total}
