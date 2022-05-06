@@ -194,7 +194,7 @@ def train_complete(model, loaders, mixup = False):
 
         if (args.cosine and epoch % args.milestones[0] == 0) or epoch == 0:
             if lr < 0:
-                optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr)
+                optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr, weight_decay = args.wd)
             else:
                 all_params = set(model.parameters())
                 wd_params = set()
@@ -205,7 +205,7 @@ def train_complete(model, loaders, mixup = False):
                     except:
                         pass
                 no_wd = all_params - wd_params
-                optimizer = torch.optim.SGD([{'params':list(wd_params)}, {'params':list(no_wd), 'weight_decay':0}], lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
+                optimizer = torch.optim.SGD([{'params':list(wd_params)}, {'params':list(no_wd), 'weight_decay':0}], lr = lr, momentum = 0.9, weight_decay = args.wd, nesterov = True)
             if args.cosine:
                 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones[0] * length)
                 lr = lr * args.gamma
