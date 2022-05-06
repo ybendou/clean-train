@@ -340,6 +340,56 @@ def miniImageNet(use_hd = True):
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 
+def imagenet(use_hd=True):
+    datasets = {}
+    classes = {}
+    target = []
+    data = []
+    nb_element_per_class = 1300
+    # Retrieve images and their classes
+    for subset in ["train", "val"]:
+        subset_path = os.path.join(args.dataset_path, 'imagenet', subset)
+        all_files = os.listdir(subset_path)
+        for f in all_files:
+            splits = f.split("_")
+            c, fn = splits[0], splits[1]
+            if c not in classes.keys():
+                if len(classes) == 0 :
+                    classes[c] = 0
+                else:
+                    classes[c] = len(classes)-1
+            target.append(classes[c])
+            path = os.path.join(subset_path, f)
+            if not use_hd:
+                image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
+                data.append(image)
+            else:
+                data.append(path)
+        datasets[subset] = [data, torch.LongTensor(target)]
+    print()
+    norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+    train_transforms = transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        norm,
+    ])
+
+    all_transforms = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        norm,
+    ])
+    train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
+    test_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
+
+
+    return (train_loader, val_loader, test_loader), [3, args.input_size, args.input_size], len(classes), False, True
+
+
 def tieredImageNet(use_hd=True):
     """
     tiredImagenet dataset
