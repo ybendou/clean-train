@@ -340,7 +340,7 @@ def miniImageNet(use_hd = True):
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 
-def imagenet(use_hd=True):
+def imageNet(use_hd=True):
     datasets = {}
     classes = {}
     target = []
@@ -659,6 +659,8 @@ def get_dataset(dataset_name):
         return fashion_mnist()
     elif dataset_name.lower() == "miniimagenet":
         return miniImageNet()
+    elif dataset_name.lower() == "imagenet":
+        return imageNet()
     elif dataset_name.lower() == "miniimagenet84":
         return miniImageNet84()
     elif dataset_name.lower() == "cubfs":
