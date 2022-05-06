@@ -389,14 +389,12 @@ def imageNet(use_hd=True):
     train_transforms = transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
         norm,
     ])
 
     all_transforms = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
-        transforms.ToTensor(),
         norm,
     ])
     train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)

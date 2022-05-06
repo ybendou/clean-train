@@ -33,8 +33,9 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.in_planes = feature_maps
         self.length = len(num_blocks)
-        self.conv1 = nn.Conv2d(input_shape[0], feature_maps, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(input_shape[0], feature_maps, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(feature_maps)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
         layers = []
         for i, nb in enumerate(num_blocks):
             layers.append(self._make_layer(block, (2 ** i) * feature_maps, nb, stride = 1 if i == 0 else 2))
@@ -50,8 +51,6 @@ class ResNet(nn.Module):
         for i in range(len(strides)):
             stride = strides[i]
             layers.append(block(self.in_planes, planes, stride))
-            if i < len(strides) - 1:
-                layers.append(nn.ReLU())
             self.in_planes = planes
         return nn.Sequential(*layers)
 
@@ -63,7 +62,7 @@ class ResNet(nn.Module):
         out = x
         if mixup_layer == 0:
             out = lam * out + (1 - lam) * out[index_mixup]
-        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.maxpool(F.relu(self.bn1(self.conv1(x))))
         for i in range(len(self.layers)):
             out = self.layers[i](out)
             if mixup_layer == i + 1:
@@ -77,11 +76,5 @@ class ResNet(nn.Module):
             return (out, out_rot), features
         return out, features
 
-def ResNet18(feature_maps, input_shape, num_classes, few_shot, rotations):
-    return ResNet(BasicBlock, [2, 2, 2, 2], feature_maps, input_shape, num_classes, few_shot, rotations)
-
-def ResNet20(feature_maps, input_shape, num_classes, few_shot, rotations):
-    return ResNet(BasicBlock, [3, 3, 3], feature_maps, input_shape, num_classes, few_shot, rotations)
-
 def ResNet50(feature_maps, input_shape, num_classes, few_shot, rotations):
-    return ResNet(BasicBlock, [3, 4, 6, 3], feature_maps, input_shape, num_classes, few_shot, rotations)
+    return ResNet(BasicBlock, [2, 2, 2, 2], feature_maps, input_shape, num_classes, few_shot, rotations)
