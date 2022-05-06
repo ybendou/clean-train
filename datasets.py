@@ -343,31 +343,44 @@ def miniImageNet(use_hd = True):
 def imageNet(use_hd=True):
     datasets = {}
     classes = {}
-    target = []
-    data = []
+
     nb_element_per_class = 1300
     # Retrieve images and their classes
+    
     for subset in ["train", "val"]:
+        target = []
+        data = []
         if subset == "train":
             subset_path = os.path.join(args.dataset_path, 'imagenet', subset)
         elif subset == "val":
             subset_path = os.path.join(args.dataset_path, 'imagenet', subset, 'valset', 'val')
         all_files = sorted(os.listdir(subset_path))
-        for f in all_files:
-            splits = f.split("_")
-            c, fn = splits[0], splits[1]
-            if c not in classes.keys():
-                if len(classes) == 0 :
-                    classes[c] = 0
+        for f in all_files : 
+            if subset == 'train':
+                splits = f.split("_")
+                c, fn = splits[0], splits[1]
+                if c not in classes.keys():
+                    if len(classes) == 0 :
+                        classes[c] = 0
+                    else:
+                        classes[c] = len(classes)-1
+                target.append(classes[c])
+                path = os.path.join(subset_path, f)
+                if not use_hd:
+                    image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
+                    data.append(image)
                 else:
-                    classes[c] = len(classes)-1
-            target.append(classes[c])
-            path = os.path.join(subset_path, f)
-            if not use_hd:
-                image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
-                data.append(image)
+                    data.append(path)
             else:
-                data.append(path)
+                for c in classes.keys():
+                    for f in os.listdir(os.path.join(subset_path, c)):
+                        target.append(classes[c])
+                        path = os.path.join(subset_path, c, f)
+                        if not use_hd:
+                            image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
+                            data.append(image)
+                        else:
+                            data.append(path)
         datasets[subset] = [data, torch.LongTensor(target)]
     print()
     norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
