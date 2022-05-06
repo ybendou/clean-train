@@ -344,9 +344,9 @@ def imageNet(use_hd=True):
     datasets = {}
     classes = {}
 
-    nb_element_per_class = 1300
-    # Retrieve images and their classes
-    
+    from PIL import ImageFile
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+
     for subset in ["train", "val"]:
         target = []
         data = []
