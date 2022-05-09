@@ -249,12 +249,13 @@ if __name__ == '__main__':
     fix_seed(args.seed)
     print('seed:', args.seed)
     if args.wandb:
-            tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['cross-domain']
-            wandb.init(project=args.wandbProjectName, 
-                entity=args.wandb, 
-                tags=tag, 
-                config=vars(args)
-                )
+        import wandb
+        tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['cross-domain']
+        wandb.init(project=args.wandbProjectName, 
+            entity=args.wandb, 
+            tags=tag, 
+            config=vars(args)
+            )
     datasets = miniImageNet_standardTraining()
     features = torch.load(args.save_features, map_location='cpu')[:, :500]
     centroids = features.mean(dim=1)
