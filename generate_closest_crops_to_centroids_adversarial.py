@@ -289,4 +289,7 @@ if __name__ == '__main__':
         closest_crops.append(M['params'])
     closest_crops = torch.stack(closest_crops)
     print('Close crop generation Done:', closest_crops.shape)
-    torch.save(closest_crops, args.closest_crops)
+    if args.end_generation_idx == len(datasets):
+        torch.save(closest_crops, args.closest_crops)
+    else:
+        torch.save(closest_crops, args.closest_crops+args.end_generation_idx)
