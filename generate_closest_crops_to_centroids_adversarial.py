@@ -8,19 +8,7 @@ import random
 import warnings
 from fstools.utils import fix_seed, load_features, stats
 from fstools.args import process_arguments
-args = process_arguments(params={'dataset':'miniimagenet', 'n_runs':10000, 'n_shots':1, 'preprocessing':'ME','n_ways':5,
-                                #'features_base_path':'/ssd2/data/AugmentedSamples/features/miniImagenet/changing_input_size/features_K100.pt1', 
-                                'features_base_path':'/users/local/y17bendo/features/miniStandardAS01.pt1', 
-                                'dataset_path': '/users/local/datasets/', 'sample_aug':1, 'feature_maps':64, 'rotations':False, 
-                                'load_model':'/users/local/y17bendo/backbones/miniStandard1.pt', 'batch_size':5, 'dropout':False, 'augmentations':True, 'n_augmentation': 200})
-fix_seed(args.seed)
-print('seed:', args.seed)
-filenametest = f'{args.dataset_path}{args.dataset}images/train.csv'
-directory = f'{args.dataset_path}{args.dataset}images/images/'
 
-
-import torch
-import torch.nn as nn
 
 class BasicBlockRN12(nn.Module):
     def __init__(self, in_planes, planes):
@@ -255,6 +243,13 @@ def freeze(model):
         p.requires_grad = False
 
 if __name__ == '__main__':
+
+    args = process_arguments()
+
+    fix_seed(args.seed)
+    print('seed:', args.seed)
+    filenametest = f'{args.dataset_path}{args.dataset}images/train.csv'
+    directory = f'{args.dataset_path}{args.dataset}images/images/'
     if args.wandb:
             tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['cross-domain']
             wandb.init(project=args.wandbProjectName, 
@@ -279,7 +274,7 @@ if __name__ == '__main__':
     print('Start crop generation')
 
     closest_crops = []
-    for i in tqdm(range(len(datasets[0]))):
+    for i in tqdm(range(10)): #len(datasets[0]))):
         img_path, classe = datasets[0][i], datasets[1][i] 
         img = norm(transforms.ToTensor()(np.array(Image.open(img_path).convert('RGB')))).unsqueeze(0)
         class_centroid = centroids[classe].to(args.device)
@@ -287,4 +282,4 @@ if __name__ == '__main__':
         closest_crops.append(best_params['params'])
     closest_crops = torch.cat(closest_crops)
 
-    torch.save(closest_crops, '/users/local/y17bendo/data/AugmentedSamples/features/miniImagenet/changing_input_size/standardTrainingFeatures/closest_crops_standard_training_adversarial.pt')
+    torch.save(closest_crops, args.closest_crops)
