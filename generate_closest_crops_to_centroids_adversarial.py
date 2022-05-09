@@ -244,7 +244,7 @@ def freeze(model):
 
 if __name__ == '__main__':
 
-    args = process_arguments()
+    from args import args
 
     fix_seed(args.seed)
     print('seed:', args.seed)
