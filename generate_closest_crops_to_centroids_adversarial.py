@@ -248,8 +248,6 @@ if __name__ == '__main__':
 
     fix_seed(args.seed)
     print('seed:', args.seed)
-    filenametest = f'{args.dataset_path}{args.dataset}images/train.csv'
-    directory = f'{args.dataset_path}{args.dataset}images/images/'
     if args.wandb:
             tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['cross-domain']
             wandb.init(project=args.wandbProjectName, 
@@ -258,7 +256,7 @@ if __name__ == '__main__':
                 config=vars(args)
                 )
     datasets = miniImageNet_standardTraining()
-    features = torch.load(args.features_base_path, map_location='cpu')[:, :500]
+    features = torch.load(args.save_features, map_location='cpu')[:, :500]
     centroids = features.mean(dim=1)
 
     # Get the model 
