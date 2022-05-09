@@ -259,25 +259,25 @@ if __name__ == '__main__':
     datasets = miniImageNet_standardTraining()
     features = torch.load(args.save_features, map_location='cpu')[:, :500]
     centroids = features.mean(dim=1)
-
+    print('data loaded')
     # Get the model 
     model = ResNet12(args.feature_maps, [3, 84, 84], 100, True, args.rotations).to(args.device)
     model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
     model.to(args.device)
     model.eval()
     freeze(model)
-    print()
+    print('model loaded')
     
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
 
     print('Start crop generation')
 
     closest_crops = []
-    for i in tqdm(range(10)): #len(datasets[0]))):
+    for i in tqdm(range(len(datasets[0]))):
         img_path, classe = datasets[0][i], datasets[1][i] 
         img = norm(transforms.ToTensor()(np.array(Image.open(img_path).convert('RGB')))).unsqueeze(0)
         class_centroid = centroids[classe].to(args.device)
-        M = train(img, centroids[classe[i]].unsqueeze(0), model, device=args.device, trainCfg={'epochs':1000, 'lr':0.01, 'mmt':0.8, 'loss_amp':1}, limit_borders=True)
+        M = train(img, class_centroid.unsqueeze(0), model, device=args.device, trainCfg={'epochs':1000, 'lr':0.01, 'mmt':0.8, 'loss_amp':1}, limit_borders=True)
         closest_crops.append(best_params['params'])
     closest_crops = torch.cat(closest_crops)
 
