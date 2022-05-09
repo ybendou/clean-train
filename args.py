@@ -102,6 +102,9 @@ parser.add_argument("--niou-asymmetric", action="store_true", help="use asymmetr
 parser.add_argument("--crop-sampler", action="store_true", help="sample crops based on if they contain the object")
 parser.add_argument("--niou-treshold", type=float, default=0.6, help="threshold to accept a crop based on its normalized IOU")
 
+parser.add_argument("--start-generation-idx", type=int, default=0, help="idx of the first image to iterate from in the dataset")
+parser.add_argument("--end-generation-idx", type=int, default=-1, help="idx of the last image to iterate from in the dataset")
+
 try :
     get_ipython()
     args = parser.parse_args(args=[])

@@ -168,7 +168,7 @@ def miniImageNet_standardTraining(use_hd = True):
 def linear(indim, outdim):
     return nn.Linear(indim, outdim)
 
-def sample_crop2(elt, params, device='cpu'):
+def sample_crop(elt, params, device='cpu'):
     cw, ch, dw, dh, size = params
     h, w = elt.shape[-2:]
     lineh = torch.linspace(-1, 1, h).to(device)
@@ -192,7 +192,11 @@ def convert_grid_params_to_crops_params(params, shape):
     dh_coords = int((ch+dh+1)*maxh/2)
     dw_coords = int((cw+dw+1)*maxw/2)
     return torch.Tensor([h, w, dh_coords, dw_coords, maxh, maxw, size]).unsqueeze(0)
-
+def clamp(params):
+    if params.data[2] + abs(params.data[0])>1:
+        params.data[2] = 1 - abs(params.data[0])
+    if params.data[3] + abs(params.data[1])>1:
+        params.data[3] = 1 - abs(params.data[1])
 def train(X, centroids, model, device='cuda:0', trainCfg={'epochs':100, 'lr':0.01, 'mmt':0.9, 'loss_amp':1}, limit_borders=False, verbose=False):
     """
         Train adversarial masks
@@ -212,7 +216,7 @@ def train(X, centroids, model, device='cuda:0', trainCfg={'epochs':100, 'lr':0.0
         if limit_borders:
             with torch.no_grad():
                 clamp(params)
-        crop = sample_crop2(X, params, device=device)
+        crop = sample_crop(X, params, device=device)
         _, output = model(crop)
         loss = L2(output, centroids)*trainCfg['loss_amp']
         # if loss is smaller than the best loss, then save the model
@@ -272,13 +276,17 @@ if __name__ == '__main__':
 
     print('Start crop generation')
 
+
+    if args.end_generation_idx == -1:
+        args.end_generation_idx = len(datasets)
+
     closest_crops = []
-    for i in tqdm(range(len(datasets[0]))):
+    for i in tqdm(range(args.start_generation_idx, args.end_generation_idx)): 
         img_path, classe = datasets[0][i], datasets[1][i] 
         img = norm(transforms.ToTensor()(np.array(Image.open(img_path).convert('RGB')))).unsqueeze(0)
         class_centroid = centroids[classe].to(args.device)
         M = train(img, class_centroid.unsqueeze(0), model, device=args.device, trainCfg={'epochs':1000, 'lr':0.01, 'mmt':0.8, 'loss_amp':1}, limit_borders=True)
-        closest_crops.append(best_params['params'])
-    closest_crops = torch.cat(closest_crops)
-
+        closest_crops.append(M['params'])
+    closest_crops = torch.stack(closest_crops)
+    print('Close crop generation Done:', closest_crops.shape)
     torch.save(closest_crops, args.closest_crops)
