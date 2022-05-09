@@ -203,7 +203,7 @@ def train(X, centroids, model, device='cuda:0', trainCfg={'epochs':100, 'lr':0.0
     """
     X = X.to(device)
     centroids = centroids.to(device)
-    cw, ch, dw, dh, size = 0., 0., 1, 1, 110.
+    cw, ch, dw, dh, size = 0., 0., 1, 1, min(110, min(X.shape[-1]-2, X.shape[-2]-2))
     params = nn.Parameter(torch.tensor([cw, ch, dw, dh, size]).to(device))
     if verbose:
         print('Init Params from center of image:', params)
@@ -292,4 +292,6 @@ if __name__ == '__main__':
     if args.end_generation_idx == len(datasets):
         torch.save(closest_crops, args.closest_crops)
     else:
-        torch.save(closest_crops, args.closest_crops+args.end_generation_idx)
+        torch.save(closest_crops, f'{args.closest_crops}_{args.start_generation_idx}_to_{args.end_generation_idx}')
+    print(f'Done for data from {args.start_generation_idx} to {args.end_generation_idx}')
+    wandb.finish()
