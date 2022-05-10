@@ -167,8 +167,21 @@ def miniImageNet_standardTraining(use_hd = True):
 
 def linear(indim, outdim):
     return nn.Linear(indim, outdim)
+def sample_cropGrid(elt, params, device='cpu'):
+    cw, ch, dw, dh, size = params
+    #assert dw+cw<=1 and dh+ch<=1 and dw >0 and dh>0, 'error in limits'
+    line = torch.linspace(-1, 1, size.int()).to(device)
+    meshx, meshy = torch.meshgrid((line, line))
+    meshx = (meshx) * dh +ch
+    meshy = (meshy) * dw +cw
 
-def sample_crop(elt, params, device='cpu'):
+    grid = torch.stack((meshy, meshx), 2)
+    grid = grid.unsqueeze(0)
+    warped = F.grid_sample(elt, grid, mode='bilinear', align_corners=False)
+    
+    return warped
+
+def sample_cropMaxPool(elt, params, device='cpu'):
     cw, ch, dw, dh, size = params
     h, w = elt.shape[-2:]
     lineh = torch.linspace(-1, 1, h).to(device)
@@ -176,11 +189,21 @@ def sample_crop(elt, params, device='cpu'):
     meshx, meshy = torch.meshgrid((lineh, linew))
     meshx = (meshx) * dh +ch
     meshy = (meshy) * dw +cw
+
     grid = torch.stack((meshy, meshx), 2)
     grid = grid.unsqueeze(0)
     warped = F.grid_sample(elt, grid, mode='bilinear', align_corners=False)
     resizer = nn.FractionalMaxPool2d(3, output_size=(size.int(), size.int()))    
     return resizer(warped)
+
+def sample_crop(elt, params, device='cpu'):
+    cw, ch, dw, dh, size = params 
+    h, w = elt.shape[-2:]
+    if size > min(h, w):
+        return sample_cropGrid(elt, params, device=device)
+    else:
+        return sample_cropMaxPool(elt, params, device=device)
+
 # Convert params to crops parameters
 def convert_grid_params_to_crops_params(params, shape):
     maxh, maxw = shape
@@ -203,7 +226,7 @@ def train(X, centroids, model, device='cuda:0', trainCfg={'epochs':100, 'lr':0.0
     """
     X = X.to(device)
     centroids = centroids.to(device)
-    cw, ch, dw, dh, size = 0., 0., 1, 1, min(110, min(X.shape[-1]-2, X.shape[-2]-2))
+    cw, ch, dw, dh, size = 0., 0., 1, 1, 110
     params = nn.Parameter(torch.tensor([cw, ch, dw, dh, size]).to(device))
     if verbose:
         print('Init Params from center of image:', params)
