@@ -199,7 +199,7 @@ def sample_cropMaxPool(elt, params, device='cpu'):
 def sample_crop(elt, params, device='cpu'):
     cw, ch, dw, dh, size = params 
     h, w = elt.shape[-2:]
-    if size > min(h, w):
+    if size >= min(h, w):
         return sample_cropGrid(elt, params, device=device)
     else:
         return sample_cropMaxPool(elt, params, device=device)
