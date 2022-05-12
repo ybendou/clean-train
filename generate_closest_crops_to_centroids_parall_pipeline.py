@@ -6,9 +6,18 @@ import torch.nn.functional as F
 import numpy as np
 import random
 import warnings
-from fstools.utils import fix_seed, load_features, stats
-from fstools.args import process_arguments
+import torch
+import torch.nn as nn
 
+def fix_seed(seed, deterministic=False):
+    ### generate random seeds
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    if deterministic:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 class BasicBlockRN12(nn.Module):
     def __init__(self, in_planes, planes):
@@ -167,107 +176,9 @@ def miniImageNet_standardTraining(use_hd = True):
 
 def linear(indim, outdim):
     return nn.Linear(indim, outdim)
-def sample_cropGrid(elt, params, device='cpu'):
-    cw, ch, dw, dh, size = params
-    #assert dw+cw<=1 and dh+ch<=1 and dw >0 and dh>0, 'error in limits'
-    line = torch.linspace(-1, 1, size.int()).to(device)
-    meshx, meshy = torch.meshgrid((line, line))
-    meshx = (meshx) * dh +ch
-    meshy = (meshy) * dw +cw
-
-    grid = torch.stack((meshy, meshx), 2)
-    grid = grid.unsqueeze(0)
-    warped = F.grid_sample(elt, grid, mode='bilinear', align_corners=False)
-    
-    return warped
-
-def sample_cropMaxPool(elt, params, device='cpu'):
-    cw, ch, dw, dh, size = params
-    h, w = elt.shape[-2:]
-    lineh = torch.linspace(-1, 1, h).to(device)
-    linew = torch.linspace(-1, 1, w).to(device)
-    meshx, meshy = torch.meshgrid((lineh, linew))
-    meshx = (meshx) * dh +ch
-    meshy = (meshy) * dw +cw
-
-    grid = torch.stack((meshy, meshx), 2)
-    grid = grid.unsqueeze(0)
-    warped = F.grid_sample(elt, grid, mode='bilinear', align_corners=False)
-    resizer = nn.FractionalMaxPool2d(3, output_size=(size.int(), size.int()))    
-    return resizer(warped)
-
-def sample_crop(elt, params, device='cpu'):
-    cw, ch, dw, dh, size = params 
-    h, w = elt.shape[-2:]
-    if size >= min(h, w):
-        return sample_cropGrid(elt, params, device=device)
-    else:
-        return sample_cropMaxPool(elt, params, device=device)
-
-# Convert params to crops parameters
-def convert_grid_params_to_crops_params(params, shape):
-    maxh, maxw = shape
-    cw, ch, dw, dh, size = params
-    cw_coords = int((cw+1)*maxw/2)
-    ch_coords = int((ch+1)*maxh/2)
-    h = int((ch-dh+1)*maxh/2)
-    w = int((cw-dw+1)*maxw/2)
-    dh_coords = int((ch+dh+1)*maxh/2)
-    dw_coords = int((cw+dw+1)*maxw/2)
-    return torch.Tensor([h, w, dh_coords, dw_coords, maxh, maxw, size]).unsqueeze(0)
-def clamp(params):
-    if params.data[2] + abs(params.data[0])>1:
-        params.data[2] = 1 - abs(params.data[0])
-    if params.data[3] + abs(params.data[1])>1:
-        params.data[3] = 1 - abs(params.data[1])
-def train(X, centroids, model, device='cuda:0', trainCfg={'epochs':100, 'lr':0.01, 'mmt':0.9, 'loss_amp':1}, limit_borders=False, verbose=False):
-    """
-        Train adversarial masks
-    """
-    X = X.to(device)
-    centroids = centroids.to(device)
-    cw, ch, dw, dh, size = 0., 0., 1, 1, 110
-    params = nn.Parameter(torch.tensor([cw, ch, dw, dh, size]).to(device))
-    if verbose:
-        print('Init Params from center of image:', params)
-    optimizer = torch.optim.Adam([params], lr=trainCfg['lr'])
-    best_epoch = {'epoch': 0, 'loss': 1e10, 'params': params.detach().cpu().numpy(), 'crop':None}
-    L2 = nn.MSELoss()
-    for epoch in range(trainCfg['epochs']):
-        optimizer.zero_grad()
-        # clip M between 0 and 1
-        if limit_borders:
-            with torch.no_grad():
-                clamp(params)
-        crop = sample_crop(X, params, device=device)
-        _, output = model(crop)
-        loss = L2(output, centroids)*trainCfg['loss_amp']
-        # if loss is smaller than the best loss, then save the model
-        if loss.item() < best_epoch['loss']:
-            best_epoch['epoch'] = epoch
-            best_epoch['loss'] = loss.item()
-            best_epoch['params'] = params.detach().cpu()
-            best_epoch['crop'] = crop.detach().cpu()
-        if epoch % 2 == 0 and verbose:
-            print(f'Epoch: {epoch}/{trainCfg["epochs"]} Loss: {loss.item():.4f}')
-        loss.backward()
-        optimizer.step()
-    # if loss is smaller than the best loss, then save the model
-    crop = sample_crop(X, params, device=device)
-    _, output = model(crop)
-    if limit_borders:
-        with torch.no_grad():
-            clamp(params)
-    loss = L2(output, centroids)*trainCfg['loss_amp']
-    if loss.item() < best_epoch['loss']:
-        best_epoch['epoch'] = epoch
-        best_epoch['loss'] = loss.item()
-        best_epoch['params'] = params.detach().cpu()
-        best_epoch['crop'] = crop.detach().cpu()
-    return best_epoch
 def freeze(model):
-    for p in model.parameters():
-        p.requires_grad = False
+        for p in model.parameters():
+            p.requires_grad = False
 
 if __name__ == '__main__':
 
@@ -275,47 +186,48 @@ if __name__ == '__main__':
 
     fix_seed(args.seed)
     print('seed:', args.seed)
-    if args.wandb:
-        import wandb
-        tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['cross-domain']
-        wandb.init(project=args.wandbProjectName, 
-            entity=args.wandb, 
-            tags=tag, 
-            config=vars(args)
-            )
+
     datasets = miniImageNet_standardTraining()
+
     features = torch.load(args.save_features, map_location='cpu')[:, :500]
     centroids = features.mean(dim=1)
-    print('data loaded')
+
     # Get the model 
     model = ResNet12(args.feature_maps, [3, 84, 84], 100, True, args.rotations).to(args.device)
     model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
     model.to(args.device)
     model.eval()
-    freeze(model)
-    print('model loaded')
+    print()
     
+            
+    freeze(model)
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
 
-    print('Start crop generation')
-
-
-    if args.end_generation_idx == -1:
-        args.end_generation_idx = len(datasets)
-
     closest_crops = []
-    for i in tqdm(range(args.start_generation_idx, args.end_generation_idx)): 
-        img_path, classe = datasets[0][i], datasets[1][i] 
-        img = norm(transforms.ToTensor()(np.array(Image.open(img_path).convert('RGB')))).unsqueeze(0)
-        class_centroid = centroids[classe].to(args.device)
-        M = train(img, class_centroid.unsqueeze(0), model, device=args.device, trainCfg={'epochs':1000, 'lr':0.01, 'mmt':0.8, 'loss_amp':1}, limit_borders=True)
-        converted_params = convert_grid_params_to_crops_params(M['params'], img.shape[-2:])
-        closest_crops.append(converted_params)
-    closest_crops = torch.stack(closest_crops)
-    print('Close crop generation Done:', closest_crops.shape)
-    if args.end_generation_idx == len(datasets):
-        torch.save(closest_crops, args.closest_crops)
-    else:
-        torch.save(closest_crops, f'{args.closest_crops}_{args.start_generation_idx}_to_{args.end_generation_idx}')
-    print(f'Done for data from {args.start_generation_idx} to {args.end_generation_idx}')
-    wandb.finish()
+    for i in tqdm(range(len(datasets[0])//args.batch_size)):
+        img_path, classe = datasets[0][i*args.batch_size:(i+1)*args.batch_size], datasets[1][i*args.batch_size:(i+1)*args.batch_size] 
+        images = [transforms.ToTensor()(np.array(Image.open(path).convert('RGB'))) for path in img_path]
+        class_centroids = torch.stack([centroids[c] for c in classe]).to(args.device)
+        min_distances = [10e8]*args.batch_size
+        best_params = torch.zeros(args.batch_size, 7)
+        for K_resize in [84, 92, 100, 110, 128, 164, 184]:
+            for _ in range(args.n_augmentation):
+                augmentations = [transforms.RandomResizedCrop(84), transforms.Resize([K_resize, K_resize]), norm]
+                elt_params = [crop_resize_rescale_image(img, augmentations, K_resize) for img in images] 
+                elt, params = list(zip(*elt_params))
+                elt = torch.stack(elt)
+                params = torch.cat(params)
+                
+                with torch.no_grad():
+                    elt = elt.to(args.device)
+                    _, features = model(elt)
+                # compute distance of feature to class centroid
+                distance = torch.norm(features-class_centroids, p=2, dim=1)
+                for b in range(args.batch_size):
+                    if distance[b].item()<min_distances[b]:
+                        min_distances[b] = distance[b]
+                        best_params[b] = params[b]
+        closest_crops.append(best_params)
+    closest_crops = torch.cat(closest_crops)
+
+    torch.save(closest_crops, args.closest_crops)
