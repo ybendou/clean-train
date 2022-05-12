@@ -454,10 +454,12 @@ for i in range(args.runs):
                 wandb.log({"run": i+1,"test acc {:d}-shot".format(args.n_shots[index]):np.mean(np.array(run_stats["best_novel_acc"])[:,index])})
     else:
         stats(run_stats["test_acc"], "Top-1")
-        wandb.log({"run": i+1,"Top-1":np.mean(np.array(run_stats["test_acc"]))})
+        if args.wandb:
+            wandb.log({"run": i+1,"Top-1":np.mean(np.array(run_stats["test_acc"]))})
         if top_5:
             stats(run_stats["test_acc_top_5"], "Top-5")
-            wandb.log({"run": i+1,"Top-5":np.mean(np.array(run_stats["test_acc_top_5"]))})
+            if args.wandb:
+                wandb.log({"run": i+1,"Top-5":np.mean(np.array(run_stats["test_acc_top_5"]))})
 
 if args.output != "":
     f = open(args.output, "a")
