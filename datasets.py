@@ -78,7 +78,7 @@ class CPUDataset():
             return elt, self.targets[idx], counter
         else:
             elt = self.transforms(elt)
-            return elt, self.targets[idx]
+            return elt, self.targets[idx], 1
     def __len__(self):
         return self.length
         
