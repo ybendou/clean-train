@@ -137,7 +137,7 @@ def get_features(model, loader, n_aug = args.sample_aug):
     model.eval()
     for augs in range(n_aug):
         all_features, offset, max_offset = [], 1000000, 0
-        for batch_idx, (data, target) in enumerate(loader):        
+        for batch_idx, (data, target, _) in enumerate(loader):        
             with torch.no_grad():
                 data, target = data.to(args.device), target.to(args.device)
                 _, features = model(data)

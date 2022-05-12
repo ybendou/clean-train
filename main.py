@@ -143,7 +143,7 @@ def test(model, test_loader, epoch=0):
         if args.ema > 0:
             ema.store()
             ema.copy_to()
-        for data, target in test_loader:
+        for data, target, _ in test_loader:
             data, target = data.to(args.device), target.to(args.device)
             output, _ = model(data)
             if args.rotations:
