@@ -67,7 +67,7 @@ class CPUDataset():
         self.use_hd = use_hd
         self.crop_sampler = crop_sampler
         if self.crop_sampler:
-            self.closest_crops = torch.load(args.closest_crops, map_location='cpu').reshape(100, 600, -1)[:, :500].reshape(100*500, -1)
+            self.closest_crops = torch.load(args.closest_crops, map_location='cpu').reshape(100, -1, 7)[:, :500].reshape(100*500, -1)
     def __getitem__(self, idx):
         if self.use_hd:
             elt = transforms.ToTensor()(np.array(Image.open(self.data[idx]).convert('RGB')))
