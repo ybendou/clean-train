@@ -211,7 +211,7 @@ if __name__ == '__main__':
         min_distances = [10e8]*args.batch_size
         best_params = torch.zeros(args.batch_size, 7)
         for K_resize in [84, 92, 100, 110, 128, 164, 184]:
-            for _ in range(args.n_augmentation):
+            for _ in range(args.sample_aug):
                 augmentations = [transforms.RandomResizedCrop(84), transforms.Resize([K_resize, K_resize]), norm]
                 elt_params = [crop_resize_rescale_image(img, augmentations, K_resize) for img in images] 
                 elt, params = list(zip(*elt_params))
