@@ -192,7 +192,7 @@ def generate_closest_crop_to_centroid(model, centroid, dataset):
             class_centroids = torch.stack([centroids[c] for c in classe]).to(args.device)
             min_distances = torch.Tensor([10e4]*args.batch_size).to(args.device)
             best_params = torch.zeros(args.batch_size, 7)
-            for K_resize in [84, 110, 128, 164]:
+            for K_resize in [84, 92, 100, 110, 128, 164, 184]: #for K_resize in [84, 110, 128, 164]:
                 augmentations = [transforms.RandomResizedCrop(84), transforms.Resize([K_resize, K_resize]), norm]
                 for _ in range(args.sample_aug):
                     elt_params = [crop_resize_rescale_image(img, augmentations, K_resize) for img in images] 
