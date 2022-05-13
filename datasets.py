@@ -341,7 +341,7 @@ def miniImageNet_standardTraining(use_hd = True, ratio=92/84):
     else:
         train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
     all_transforms = torch.nn.Sequential(transforms.Resize(int(ratio*args.input_size)), transforms.CenterCrop(args.input_size), norm)
-    transforms_AS = torch.nn.Sequential(transforms.RandomResizedCrop(args.input_size), norm)
+    transforms_AS = torch.nn.Sequential(transforms.Resize(int(ratio*args.input_size)), transforms.CenterCrop(args.input_size), norm) if args.sample_aug==1 else torch.nn.Sequential(transforms.RandomResizedCrop(args.input_size), norm)
 
     train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd, crop_sampler=args.crop_sampler)
     train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = transforms_AS, forcecpu = True, shuffle = False, use_hd = use_hd,  crop_sampler=False)
