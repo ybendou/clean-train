@@ -340,12 +340,14 @@ def miniImageNet_standardTraining(use_hd = True, ratio=92/84):
         train_transforms = [transforms.RandomResizedCrop(84), transforms.Resize([int(ratio*args.input_size), int(ratio*args.input_size)]), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm]
     else:
         train_transforms = torch.nn.Sequential(transforms.RandomResizedCrop(84), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm)
-    all_transforms = torch.nn.Sequential(transforms.Resize(int(ratio*args.input_size)), transforms.CenterCrop(args.input_size), norm) if args.sample_aug == 1 else torch.nn.Sequential(transforms.RandomResizedCrop(args.input_size), norm)
-    
+    all_transforms = torch.nn.Sequential(transforms.Resize(int(ratio*args.input_size)), transforms.CenterCrop(args.input_size), norm)
+    transforms_AS = torch.nn.Sequential(transforms.RandomResizedCrop(args.input_size), norm)
+
     train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd, crop_sampler=args.crop_sampler)
+    train_clean = iterator(datasets["train"][0], datasets["train"][1], transforms = transforms_AS, forcecpu = True, shuffle = False, use_hd = use_hd,  crop_sampler=False)
     val_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, crop_sampler=False)
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd, crop_sampler=False)
-    return (train_loader, val_loader, test_loader), [3, args.input_size, args.input_size], len(classes), False, True
+    return (train_loader, train_clean, val_loader, test_loader), [3, args.input_size, args.input_size], len(classes), False, True
 
 
 def cifarfs(use_hd=True, data_augmentation=True):

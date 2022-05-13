@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from args import *
 from utils import *
+from tqdm import tqdm
 
 n_runs = args.n_runs
 batch_few_shot_runs = args.batch_fs
@@ -135,7 +136,7 @@ def ncm_cosine(train_features, features, run_classes, run_indices, n_shots, elem
 
 def get_features(model, loader, n_aug = args.sample_aug):
     model.eval()
-    for augs in range(n_aug):
+    for augs in tqdm(range(n_aug)):
         all_features, offset, max_offset = [], 1000000, 0
         for batch_idx, (data, target, _) in enumerate(loader):        
             with torch.no_grad():

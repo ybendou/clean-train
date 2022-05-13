@@ -181,7 +181,7 @@ def train_complete(model, loaders, mixup = False):
         for i in range(len(few_shot_meta_data["best_val_acc"])):
             few_shot_meta_data["best_val_acc"][i] = 0
     else:
-        train_loader, val_loader, test_loader = loaders
+        train_loader, train_clean, val_loader, test_loader = loaders
 
     lr = args.lr
 
@@ -244,6 +244,10 @@ def train_complete(model, loaders, mixup = False):
                     print("test acc: {:.2f}%".format(100 * test_stats["test_acc"]))
                     if args.wandb:
                         wandb.log({'epoch':epoch, f'test-acc':test_stats["test_acc"]})
+                if epoch == args.epochs + args.manifold_mixup - 1:
+                    if args.save_features != '':
+                        train_features = few_shot_eval.get_features(model, train_clean, n_aug=args.sample_aug)
+                        torch.save(train_features, args.save_features)
 
     if args.epochs + args.manifold_mixup <= args.skip_epochs:
         if few_shot:
