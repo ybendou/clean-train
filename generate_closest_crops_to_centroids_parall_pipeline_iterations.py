@@ -232,7 +232,7 @@ if __name__ == '__main__':
     for epoch in range(args.epochs):
         # Generate closest_crops
         closest_crops = generate_closest_crop_to_centroid(model, centroids, datasets)
-        
+        torch.save(closest_crops, args.closest_crops+'_iter_'+str(epoch))
         # Generate new centroids
         _, loader = miniImageNet_standardTraining(closest_crops=closest_crops)
         new_centroids = get_features(model, loader, n_aug = 50).mean(dim=1) # generate 50 crops per image for AS
