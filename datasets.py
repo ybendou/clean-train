@@ -449,40 +449,67 @@ def miniImageNet(use_hd = True, ratio=92/84):
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     return (train_loader, train_clean, val_loader, test_loader), [3, args.input_size, args.input_size], (64, 16, 20, 600), True, False
 
+class myImagenetDataset(datasets.ImageNet):
+    def __init__(self, root, split, closest_crops=None, **kwargs):
+        super().__init__(root, split, **kwargs)
+        self.closest_crops = closest_crops
+        if self.closest_crops != None:
+            self.transform = transforms.Compose(self.transform)
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        path, target = self.samples[index]
+        sample = self.loader(path)
+        
+        if self.transform is not None:
+            if self.closest_crops == None:
+                sample = self.transform(sample)
+            else:
+                sample = select_crop(elt, self.transform, self.closest_crops[index])
+        
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return sample, target
 
 def imageNet(use_hd=True):
    
     norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
-    train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        norm,
-    ])
+    if args.closest_crop != '':
+        train_transforms = [
+            transforms.RandomResizedCrop(224),
+            transforms.Resize([224, 224]),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            norm]
+        closest_crops = torch.load(args.closest_crops, map_location='cpu')
+    else:
+        train_transforms = transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            norm])
+        closest_crops = None
 
     all_transforms = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
+        transforms.ToTensor(),
         norm,
     ])
 
-    train_dataset = datasets.ImageNet(os.path.join(args.dataset_path,'imagenet'), split='train', transform=transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        norm,
-    ]))
+    train_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=all_transforms, closest_crops=closest_crops)
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= min(8, os.cpu_count()))
 
-    test_dataset = datasets.ImageNet(os.path.join(args.dataset_path,'imagenet'), split='val', transform=transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        norm,
-    ]))
+    test_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='val', transform=all_transforms)
 
     return (train_loader, train_loader, test_loader), [3, 224, 224], 1000, False, True
 
