@@ -241,7 +241,7 @@ if __name__ == '__main__':
         closest_crops = generate_closest_crop_to_centroid(model, centroids.cpu(), datasets)
         torch.save(closest_crops, args.closest_crops+'_iter_'+str(epoch))
         # Generate new centroids
-        _, loader = miniImageNet_standardTraining(closest_crops=closest_crops, K_resize=84, centroids=None)
+        _, loader = miniImageNet_standardTraining(closest_crops=closest_crops.cpu(), K_resize=84, centroids=None)
         new_centroids = get_features(model, loader, n_aug = 50).mean(dim=1) # generate 50 crops per image for AS
         previous_diff = diff*1
         diff = (new_centroids - centroids).pow(2).sum(1).mean()
