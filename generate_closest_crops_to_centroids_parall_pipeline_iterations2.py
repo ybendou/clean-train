@@ -102,7 +102,7 @@ class CPUDataset():
 
         if self.centroids != None:
             elt, params = crop_resize_rescale_image(elt, self.transforms, self.K_resize)
-            return elt, params, self.centroids[self.targets[idx].int()]
+            return elt, params, self.centroids[self.targets[idx]]
         else:
             if self.closest_crops != None:
                 elt = select_crop(elt, self.transforms, self.closest_crops[idx])
@@ -193,15 +193,17 @@ def generate_closest_crop_to_centroid(model, centroids, dataset):
     # Generate K_resize crops of the centroid
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     min_distances = torch.Tensor([10e4]*len(dataset)).to(args.device)
-    best_params = torch.zeros(len(dataset), 7)
+    best_params = torch.zeros(len(dataset), 7).to(args.device)
     with torch.no_grad():
         for K_resize in [84, 92, 100, 110, 128, 164, 184]:
-            _, loader = miniImageNet_standardTraining(closest_crops=None, K_resize=K_resize, centroids=centroids)
+            _, loader = miniImageNet_standardTraining(closest_crops=None, K_resize=K_resize, centroids=centroids.cpu())
             for _ in tqdm(range(args.sample_aug)):
                 distances = torch.Tensor().to(args.device)
                 all_params = torch.Tensor().to(args.device)
-                for i, (elt, params, class_centroids) in enumerate(loader):
+                for i, (elt, params, class_centroids) in tqdm(enumerate(loader)):
                     elt = elt.to(args.device)
+                    class_centroids = class_centroids.to(args.device)
+                    params = params.to(args.device)
                     _, features = model(elt)
                     # compute distance of feature to class centroid
                     distance = torch.sqrt((features - class_centroids).pow(2).sum(1)) 
