@@ -344,9 +344,6 @@ def imageNet(use_hd=True):
     datasets = {}
     classes = {}
 
-    from PIL import ImageFile
-    ImageFile.LOAD_TRUNCATED_IMAGES = True
-
     for subset in ["train", "val"]:
         target = []
         data = []
@@ -402,6 +399,41 @@ def imageNet(use_hd=True):
 
     return (train_loader, train_loader, test_loader), [3, 224, 224], len(classes), False, True
 
+def imageNet2(use_hd=True):
+   
+    norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+    train_transforms = transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        norm,
+    ])
+
+    all_transforms = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        norm,
+    ])
+
+    train_dataset = datasets.ImageNet(args.dataset_path, split='train', transform=transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        norm,
+    ]))
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= min(8, os.cpu_count()))
+
+    test_dataset = datasets.ImageNet(args.dataset_path, split='val', transform=transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        norm,
+    ]))
+
+    return (train_loader, train_loader, test_loader), [3, 224, 224], 1000, False, True
 
 def tieredImageNet(use_hd=True):
     """
