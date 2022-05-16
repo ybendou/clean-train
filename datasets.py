@@ -503,16 +503,22 @@ def imageNet(use_hd=True):
         norm,
     ])
 
-    train_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=all_transforms, closest_crops=closest_crops)
+    train_clean_transforms = all_transforms if args.sample_aug==1 else transforms.Compose([transforms.RandomResizedCrop(224), transforms.ToTensor(), norm]) 
+    
+    train_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=train_transforms, closest_crops=closest_crops)
+    train_clean_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=train_clean_transforms, closest_crops=None)
+
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= min(8, os.cpu_count()), pin_memory=True)
+    train_clean_loader = torch.utils.data.DataLoader(
+        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
 
     test_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='val', transform=all_transforms)
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
 
-    return (train_loader, train_loader, test_loader), [3, 224, 224], 1000, False, True
+    return (train_loader, train_clean_loader, test_loader, test_loader), [3, 224, 224], 1000, False, True
 
 
 def tieredImageNet(use_hd=True):
