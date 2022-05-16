@@ -102,7 +102,7 @@ class CPUDataset():
 
         if self.centroids != None:
             elt, params = crop_resize_rescale_image(elt, self.transforms, self.K_resize)
-            return elt, params, self.centroids[self.targets[idx]]
+            return elt, params, self.centroids[self.targets[idx].int()]
         else:
             if self.closest_crops != None:
                 elt = select_crop(elt, self.transforms, self.closest_crops[idx])
@@ -157,10 +157,11 @@ def miniImageNet_standardTraining(closest_crops=None, use_hd = True, K_resize=84
 
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
-    if closest_crops == None:
+    if closest_crops == None and centroids==None:
         train_transforms = transforms.Compose([transforms.RandomResizedCrop(K_resize), norm])
     else:
         train_transforms = [transforms.RandomResizedCrop(K_resize), transforms.Resize([K_resize, K_resize]), norm]
+    if closest_crops != None:
         closest_crops = closest_crops.reshape(100*500, -1) 
     train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd, shuffle=False, closest_crops=closest_crops, centroids=centroids, K_resize=K_resize) # IMPORTANT TO NOT SHUFFLE
     return datasets['train'], train_loader
