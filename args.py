@@ -41,6 +41,7 @@ parser.add_argument("--feature-maps", type=int, default=64, help="number of feat
 parser.add_argument("--input-size", type=int, default=84, help="Input size to the model")
 
 parser.add_argument("--lr", type=float, default="0.1", help="initial learning rate (negative is for Adam, e.g. -0.001)")
+parser.add_argument("--wd", type=float, default=-1, help="weight decay (if negative, for SGD 5e-4 and for Adam 0)")
 parser.add_argument("--epochs", type=int, default=350, help="total number of epochs")
 parser.add_argument("--milestones", type=str, default="100", help="milestones for lr scheduler, can be int (then milestones every X epochs) or list. 0 means no milestones")
 parser.add_argument("--gamma", type=float, default=-1., help="multiplier for lr at milestones")
