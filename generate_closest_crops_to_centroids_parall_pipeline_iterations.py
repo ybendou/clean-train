@@ -238,7 +238,7 @@ if __name__ == '__main__':
         new_centroids = get_features(model, loader, n_aug = 50).mean(dim=1) # generate 50 crops per image for AS
         previous_diff = diff*1
         diff = (new_centroids - centroids).pow(2).sum(1).mean()
-        print('diff:', diff, 'previous diff:', previous_diff, 'ratio:', previous_diff/diff)
+        print('diff:', diff.item(), 'previous diff:', previous_diff.item(), 'ratio:', (previous_diff/diff).item())
         centroids = new_centroids
 
     torch.save(closest_crops, args.closest_crops)
