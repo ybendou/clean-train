@@ -792,6 +792,8 @@ def get_dataset(dataset_name):
         return fc100()
     elif dataset_name.lower() == 'miniimagenetstandard':
         return miniImageNet_standardTraining()
+    elif dataset_name.lower() == 'imagenet':
+        return imageNet()
     else:
         print("Unknown dataset!")
 
