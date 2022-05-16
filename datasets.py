@@ -453,8 +453,7 @@ class myImagenetDataset(datasets.ImageNet):
     def __init__(self, root, split, closest_crops=None, **kwargs):
         super().__init__(root, split, **kwargs)
         self.closest_crops = closest_crops
-        if self.closest_crops != None:
-            self.transform = transforms.Compose(self.transform)
+
     def __getitem__(self, index):
         """
         Args:
@@ -488,7 +487,7 @@ def imageNet(use_hd=True):
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             norm]
-        closest_crops = torch.load(args.closest_crops, map_location='cpu')
+        closest_crops = torch.load(args.closest_crops, map_location='cpu').reshape(-1, 7)
     else:
         train_transforms = transforms.Compose([
             transforms.RandomResizedCrop(224),
