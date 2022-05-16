@@ -154,7 +154,7 @@ def miniImageNet_standardTraining(closest_crops=None, use_hd = True, ratio=92/84
 
     print()
     norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
-    train_transforms = [transforms.RandomResizedCrop(84), transforms.Resize([int(ratio*args.input_size), int(ratio*args.input_size)]), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm]
+    train_transforms = [transforms.RandomResizedCrop(84), transforms.Resize([int(ratio*args.input_size), int(ratio*args.input_size)]), norm] #[transforms.RandomResizedCrop(84), transforms.Resize([int(ratio*args.input_size), int(ratio*args.input_size)]), transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4), transforms.RandomHorizontalFlip(), norm]
     train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd, crop_sampler=args.crop_sampler, shuffle=False, closest_crops=closest_crops) # IMPORTANT TO NOT SHUFFLE
     return datasets['train'], train_loader
 
