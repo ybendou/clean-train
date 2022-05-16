@@ -51,14 +51,12 @@ def select_crop(elt, transformations, closest_crop):
     crop = transformations[0]
     params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
     NIOU = normalized_bb_intersection_over_union(closest_crop, params)
-    counter = 1
     while NIOU < args.niou_treshold:
         params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
         NIOU = normalized_bb_intersection_over_union(closest_crop, params)
-        counter += 1
     elt = transforms.functional.crop(elt, *params)
     elt = torch.nn.Sequential(*transformations[1:])(elt)
-    return elt, counter
+    return elt
 
 
 def fix_seed(seed, deterministic=False):
@@ -102,11 +100,11 @@ class CPUDataset():
         else:
             elt = self.data[idx]
         if self.crop_sampler:
-            elt, counter = select_crop(elt, self.transforms, self.closest_crops[idx])
-            return elt, self.targets[idx], counter
+            elt = select_crop(elt, self.transforms, self.closest_crops[idx])
+            return elt, self.targets[idx]
         else:
             elt = self.transforms(elt)
-            return elt, self.targets[idx], 1
+            return elt, self.targets[idx]
     def __len__(self):
         return self.length
 
@@ -166,7 +164,7 @@ def get_features(model, loader, n_aug = args.sample_aug):
     model.eval()
     for augs in tqdm(range(n_aug)):
         all_features, offset, max_offset = [], 1000000, 0
-        for batch_idx, (data, target, _) in enumerate(loader):        
+        for batch_idx, (data, target) in enumerate(loader):        
             with torch.no_grad():
                 data, target = data.to(args.device), target.to(args.device)
                 _, features = model(data)

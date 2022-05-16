@@ -44,14 +44,12 @@ def select_crop(elt, transformations, closest_crop):
     crop = transformations[0]
     params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
     NIOU = normalized_bb_intersection_over_union(closest_crop, params)
-    counter = 1
     while NIOU < args.niou_treshold:
         params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
         NIOU = normalized_bb_intersection_over_union(closest_crop, params)
-        counter += 1
     elt = transforms.functional.crop(elt, *params)
     elt = torch.nn.Sequential(*transformations[1:])(elt)
-    return elt, counter
+    return elt
 
 class CPUDataset():
     def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False, crop_sampler=False):
@@ -74,11 +72,11 @@ class CPUDataset():
         else:
             elt = self.data[idx]
         if self.crop_sampler:
-            elt, counter = select_crop(elt, self.transforms, self.closest_crops[idx])
-            return elt, self.targets[idx], counter
+            elt = select_crop(elt, self.transforms, self.closest_crops[idx])
+            return elt, self.targets[idx]
         else:
             elt = self.transforms(elt)
-            return elt, self.targets[idx], 1
+            return elt, self.targets[idx]
     def __len__(self):
         return self.length
         
@@ -451,6 +449,42 @@ def miniImageNet(use_hd = True, ratio=92/84):
     test_loader = iterator(datasets["test"][0], datasets["test"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
     return (train_loader, train_clean, val_loader, test_loader), [3, args.input_size, args.input_size], (64, 16, 20, 600), True, False
 
+
+def imageNet(use_hd=True):
+   
+    norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+    train_transforms = transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        norm,
+    ])
+
+    all_transforms = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        norm,
+    ])
+
+    train_dataset = datasets.ImageNet(os.path.join(args.dataset_path,'imagenet'), split='train', transform=transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        norm,
+    ]))
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= min(8, os.cpu_count()))
+
+    test_dataset = datasets.ImageNet(os.path.join(args.dataset_path,'imagenet'), split='val', transform=transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        norm,
+    ]))
+
+    return (train_loader, train_loader, test_loader), [3, 224, 224], 1000, False, True
 
 
 def tieredImageNet(use_hd=True):
