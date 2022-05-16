@@ -221,6 +221,8 @@ if __name__ == '__main__':
     model = ResNet12(args.feature_maps, [3, 84, 84], 100, True, args.rotations).to(args.device)
     model.load_state_dict(torch.load(args.load_model, map_location=torch.device(args.device)))
     model.to(args.device)
+    if len(args.devices) > 1:
+        model = torch.nn.DataParallel(model, device_ids = args.devices)
     model.eval()
     freeze(model)
     print()
