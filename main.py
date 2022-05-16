@@ -18,6 +18,7 @@ import few_shot_eval
 import resnet
 import wideresnet
 import resnet12
+import resnet50
 import s2m2
 import mlp
 print("models.")
@@ -370,6 +371,8 @@ def create_model():
         return mlp.MLP(args.feature_maps, int(args.model[3:]), input_shape, num_classes, args.rotations, few_shot).to(args.device)
     if args.model.lower() == "s2m2r":
         return s2m2.S2M2R(args.feature_maps, input_shape, args.rotations, num_classes = num_classes).to(args.device)
+    if args.model.lower() == "resnet50":
+        return resnet50.ResNet50(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)
 
 if args.test_features != "":
     try:
