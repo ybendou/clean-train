@@ -212,7 +212,7 @@ def generate_closest_crop_to_centroid(model, centroids, dataset):
             mask = (min_distances-distances>0)
             best_params[mask] = all_params[mask]
             min_distances[mask] = distances[mask]
-        return best_params
+    return best_params
 
 if __name__ == '__main__':
     fix_seed(args.seed)
