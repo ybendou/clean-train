@@ -191,7 +191,6 @@ def get_features(model, loader, n_aug = args.sample_aug):
 
 def generate_closest_crop_to_centroid(model, centroids, dataset):
     # Generate K_resize crops of the centroid
-    norm = transforms.Normalize(np.array([x / 255.0 for x in [125.3, 123.0, 113.9]]), np.array([x / 255.0 for x in [63.0, 62.1, 66.7]]))
     min_distances = torch.Tensor([10e4]*len(dataset[0])).to(args.device)
     best_params = torch.zeros(len(dataset[0]), 7).to(args.device)
     

@@ -153,4 +153,10 @@ if args.gamma == -1:
 if args.mm:
     args.mixup = True
     
+if args.wd == -1:
+    if args.lr>0: #SGD
+        args.wd = 5e-4
+    else: #Adam
+        args.wd = 0 
+
 print("args, ", end='')
