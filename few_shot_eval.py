@@ -148,9 +148,11 @@ def get_features(model, loader, n_aug = args.sample_aug):
         num_classes = max_offset - offset + 1
         print(".", end='')
         if augs == 0:
-            features_total = torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
+            features_total = torch.cat(all_features, dim = 0)
         else:
-            features_total += torch.cat(all_features, dim = 0).reshape(num_classes, -1, all_features[0].shape[1])
+            features_total += torch.cat(all_features, dim = 0)
+        if args.dataset != 'imagenet':
+            features_total = features_total.reshape(num_classes, -1, all_features[0].shape[1])
     return features_total / n_aug
 
 def eval_few_shot(train_features, val_features, novel_features, val_run_classes, val_run_indices, novel_run_classes, novel_run_indices, n_shots, transductive = False,elements_train=None):
