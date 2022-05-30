@@ -96,9 +96,4 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
         
 def ResNet50(feature_maps, input_shape, num_classes, few_shot, rotations, default_torch=False):
-    if default_torch:
-        # use pytorch resnet model
-        model = torch.hub.load('pytorch/vision:v0.6.0', 'resnet50', pretrained=False)
-        return ResNet_torch(model, rotations)
-    else:
-        return ResNet(Bottleneck, [3,4,6,3], feature_maps, input_shape, num_classes, few_shot, rotations)
+    return ResNet(Bottleneck, [3,4,6,3], feature_maps, input_shape, num_classes, few_shot, rotations)
