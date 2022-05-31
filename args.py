@@ -64,6 +64,7 @@ parser.add_argument("--device", type=str, default="cuda:0", help="device(s) to u
 parser.add_argument("--dataset-path", type=str, default=os.environ.get("DATASETS"), help="dataset path")
 parser.add_argument("--dataset-device", type=str, default="", help="use a different device for storing the datasets (use 'cpu' if you are lacking VRAM)")
 parser.add_argument("--deterministic", action="store_true", help="use desterministic randomness for reproducibility")
+parser.add_argument("--max-workers", action="store_true", help="use all cpu cores for data loading")
 
 ### run options
 parser.add_argument("--skip-epochs", type=int, default="0", help="number of epochs to skip before evaluating few-shot performance")

@@ -185,14 +185,14 @@ class EpisodicDataset():
 def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False, crop_sampler=False):
     if args.dataset_device == "cpu" or forcecpu:
         dataset = CPUDataset(data, target, transforms, use_hd = use_hd, crop_sampler=crop_sampler)
-        return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers = min(8, os.cpu_count()))
+        return torch.utils.data.DataLoader(dataset, batch_size = args.batch_size, shuffle = shuffle, num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()))
     else:
         return Dataset(data, target, transforms, shuffle = shuffle)
 
 def episodic_iterator(data, num_classes, transforms, forcecpu = False, use_hd = False):
     if args.dataset_device == "cpu" or forcecpu:
         dataset = EpisodicCPUDataset(data, num_classes, transforms, use_hd = use_hd)
-        return torch.utils.data.DataLoader(dataset, batch_size = (args.batch_size // args.n_ways) * args.n_ways, shuffle = False, num_workers = min(8, os.cpu_count()))
+        return torch.utils.data.DataLoader(dataset, batch_size = (args.batch_size // args.n_ways) * args.n_ways, shuffle = False, num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()))
     else:
         return EpisodicDataset(data, num_classes, transforms, use_hd = use_hd)
 
@@ -510,13 +510,13 @@ def imageNet(use_hd=True):
 
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= min(8, os.cpu_count()), pin_memory=True)
+        train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
     train_clean_loader = torch.utils.data.DataLoader(
-        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
+        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers= num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
 
     test_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='val', transform=all_transforms)
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
+        test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
 
     return (train_loader, train_clean_loader, test_loader, test_loader), [3, 224, 224], 1000, False, True
 

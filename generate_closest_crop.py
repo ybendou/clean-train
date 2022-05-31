@@ -139,7 +139,7 @@ def imageNet(closest_crops=None, use_hd = True, K_resize=224, centroids=None, ba
     train_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=train_transforms, closest_crops=closest_crops, K_resize=K_resize, centroids=centroids)
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
+        train_dataset, batch_size=batch_size, shuffle=False,num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
 
     return train_loader, [len(train_dataset), 3, K_resize, K_resize], [1000, 1300]
 
@@ -181,7 +181,7 @@ class CPUDataset():
 def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False, closest_crops=None, centroids=None, K_resize=0, batch_size=args.batch_size):
     if args.dataset_device == "cpu" or forcecpu:
         dataset = CPUDataset(data, target, transforms, use_hd = use_hd, closest_crops=closest_crops, centroids=centroids, K_resize=K_resize)
-        return torch.utils.data.DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, num_workers = min(os.cpu_count(), 1))
+        return torch.utils.data.DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()))
     else:
         return Dataset(data, target, transforms, shuffle = shuffle)
 
