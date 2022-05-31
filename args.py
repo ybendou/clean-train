@@ -20,6 +20,8 @@ To train CIFAR100 with 80.12% accuracy (94.70% top-5) (4h):
 python main.py --mixup --model wideresnet --feature-maps 16 --dataset CIFAR100
 To train Omniglot (few-shot) with 99.85% accuracy (99.39% in 1-shot) (10minutes):
 python main.py --dataset omniglotfs --dataset-device cpu --feature-maps 16 --milestones 10 --epochs 30 --preprocessing "PEME"
+To train ImageNet (few-shot) with 76% accuracy (38h):
+python main.py --dataset imagenet --model resnet50 --milestones 30 --epochs 90 --batch-size 256 --lr 0.01 --wd 1e-4 --ema 0.99
 To train CUBFS (few-shot) with 85.24% accuracy (68.14% in 1-shot) (2h):
 python main.py --dataset cubfs --mixup --rotations --preprocessing "PEME"
 To train CIFARFS (few-shot) with 84.87% accuracy (70.43% in 1-shot) (1h):
