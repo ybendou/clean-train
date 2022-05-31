@@ -340,100 +340,65 @@ def miniImageNet(use_hd = True):
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 
-def imageNet(use_hd=True):
-    datasets = {}
-    classes = {}
+class myImagenetDataset(datasets.ImageNet):
+    """
+    Custom imageNet dataset class in case we want to modify it
+    """
+    def __init__(self, root, split, **kwargs):
+        super().__init__(root, split, **kwargs)
 
-    for subset in ["train", "val"]:
-        target = []
-        data = []
-        if subset == "train":
-            subset_path = os.path.join(args.dataset_path, 'imagenet', subset)
-        elif subset == "val":
-            subset_path = os.path.join(args.dataset_path, 'imagenet', subset, 'valset', 'val')
-        all_files = sorted(os.listdir(subset_path))
-        for f in all_files : 
-            if subset == 'train':
-                splits = f.split("_")
-                c, fn = splits[0], splits[1]
-                if c not in classes.keys():
-                    if len(classes) == 0 :
-                        classes[c] = 0
-                    else:
-                        classes[c] = len(classes)-1
-                target.append(classes[c])
-                path = os.path.join(subset_path, f)
-                if not use_hd:
-                    image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
-                    data.append(image)
-                else:
-                    data.append(path)
-            else:
-                for c in classes.keys():
-                    for f in os.listdir(os.path.join(subset_path, c)):
-                        target.append(classes[c])
-                        path = os.path.join(subset_path, c, f)
-                        if not use_hd:
-                            image = transforms.ToTensor()(np.array(Image.open(path).convert('RGB')))
-                            data.append(image)
-                        else:
-                            data.append(path)
-        datasets[subset] = [data, torch.LongTensor(target)]
-    print()
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        path, target = self.samples[index]
+        sample = self.loader(path)
+        
+        if self.transform is not None:
+            sample = self.transform(sample)
+        
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+        return sample, target
+
+def imageNet(use_hd=True):  
+    """
+    Loads the ImageNet dataset
+    """
     norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
     train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        norm,
-    ])
-
-    all_transforms = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        norm,
-    ])
-    train_loader = iterator(datasets["train"][0], datasets["train"][1], transforms = train_transforms, forcecpu = True, use_hd = use_hd)
-    test_loader = iterator(datasets["val"][0], datasets["val"][1], transforms = all_transforms, forcecpu = True, shuffle = False, use_hd = use_hd)
-
-    return (train_loader, train_loader, test_loader), [3, 224, 224], len(classes), False, True
-
-def imageNet2(use_hd=True):
-   
-    norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-
-    train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(224),
-        transforms.RandomHorizontalFlip(),
-        norm,
-    ])
-
-    all_transforms = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        norm,
-    ])
-
-    train_dataset = datasets.ImageNet(args.dataset_path, split='train', transform=transforms.Compose([
         transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
+        norm])
+
+    all_transforms = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(), 
         norm,
-    ]))
+    ])
+
+    train_clean_transforms = all_transforms if args.sample_aug==1 else transforms.Compose([transforms.RandomResizedCrop(224), transforms.ToTensor(), norm]) 
+    
+    train_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=train_transforms)
+    train_clean_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=train_clean_transforms)
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= min(8, os.cpu_count()))
+        train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= min(8, os.cpu_count()), pin_memory=True)
+    train_clean_loader = torch.utils.data.DataLoader(
+        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
 
-    test_dataset = datasets.ImageNet(args.dataset_path, split='val', transform=transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        norm,
-    ]))
+    test_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='val', transform=all_transforms)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
 
-    return (train_loader, train_loader, test_loader), [3, 224, 224], 1000, False, True
+    return (train_loader, train_clean_loader, test_loader, test_loader), [3, 224, 224], 1000, False, True
 
 def tieredImageNet(use_hd=True):
     """
