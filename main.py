@@ -18,6 +18,7 @@ import few_shot_eval
 import resnet
 import wideresnet
 import resnet12
+import resnet50
 import s2m2
 import mlp
 print("models.")
@@ -194,7 +195,7 @@ def train_complete(model, loaders, mixup = False):
 
         if (args.cosine and epoch % args.milestones[0] == 0) or epoch == 0:
             if lr < 0:
-                optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr)
+                optimizer = torch.optim.Adam(model.parameters(), lr = -1 * lr, weight_decay = args.wd)
             else:
                 all_params = set(model.parameters())
                 wd_params = set()
@@ -205,7 +206,7 @@ def train_complete(model, loaders, mixup = False):
                     except:
                         pass
                 no_wd = all_params - wd_params
-                optimizer = torch.optim.SGD([{'params':list(wd_params)}, {'params':list(no_wd), 'weight_decay':0}], lr = lr, momentum = 0.9, weight_decay = 5e-4, nesterov = True)
+                optimizer = torch.optim.SGD([{'params':list(wd_params)}, {'params':list(no_wd), 'weight_decay':0}], lr = lr, momentum = 0.9, weight_decay = args.wd, nesterov = True)
             if args.cosine:
                 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = args.milestones[0] * length)
                 lr = lr * args.gamma
@@ -356,6 +357,8 @@ def create_model():
         return resnet.ResNet18(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)
     if args.model.lower() == "resnet20":
         return resnet.ResNet20(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)
+    if args.model.lower() == "resnet50":
+        return resnet50.ResNet50(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)   
     if args.model.lower() == "wideresnet":
         return wideresnet.WideResNet(args.feature_maps, input_shape, few_shot, args.rotations, num_classes = num_classes).to(args.device)
     if args.model.lower() == "resnet12":
@@ -403,11 +406,12 @@ for i in range(args.runs):
         print(args)
     if args.wandb:
         tag = (args.dataset != '')*[args.dataset] + (args.dataset == '')*['cross-domain']
-        wandb.init(project="few-shot", 
+        wandb.init(project=args.wandbProjectName, 
             entity=args.wandb, 
             tags=tag, 
-            notes=str(vars(args))
+            config=vars(args)
             )
+
     model = create_model()
     if args.ema > 0:
         ema = ExponentialMovingAverage(model.parameters(), decay=args.ema)

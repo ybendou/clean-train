@@ -39,6 +39,7 @@ parser.add_argument("--batch-size", type=int, default=64, help="batch size")
 parser.add_argument("--batch-fs", type=int, default=100, help="batch size for few shot runs")
 parser.add_argument("--feature-maps", type=int, default=64, help="number of feature maps")
 parser.add_argument("--lr", type=float, default="0.1", help="initial learning rate (negative is for Adam, e.g. -0.001)")
+parser.add_argument("--wd", type=float, default=-1, help="weight decay (if negative, for SGD 5e-4 and for Adam 0)")
 parser.add_argument("--epochs", type=int, default=350, help="total number of epochs")
 parser.add_argument("--milestones", type=str, default="100", help="milestones for lr scheduler, can be int (then milestones every X epochs) or list. 0 means no milestones")
 parser.add_argument("--gamma", type=float, default=-1., help="multiplier for lr at milestones")
@@ -78,6 +79,7 @@ parser.add_argument("--test-features", type=str, default="", help="test features
 parser.add_argument("--load-model", type=str, default="", help="load model from file")
 parser.add_argument("--seed", type=int, default=-1, help="set random seed manually, and also use deterministic approach")
 parser.add_argument("--wandb", type=str, default='', help="Report to wandb, input is the entity name")
+parser.add_argument("--wandbProjectName", type=str, default='few-shot', help="wandb project name")
 
 ### few-shot parameters
 parser.add_argument("--n-shots", type=str, default="[1,5]", help="how many shots per few-shot run, can be int or list of ints. In case of episodic training, use first item of list as number of shots.")
@@ -93,11 +95,7 @@ parser.add_argument("--transductive", action="store_true", help ="test features 
 parser.add_argument("--transductive-n-iter-softkmeans", type=int, default=200, help="number of iterations for few-shot transductive")
 parser.add_argument("--transductive-temperature-softkmeans", type=float, default=5, help="temperature for few-shot transductive is using softkmeans")
 
-try :
-    get_ipython()
-    args = parser.parse_args(args=[])
-except :
-    args = parser.parse_args()
+args = parser.parse_args()
 
 ### process arguments
 if args.dataset_device == "":
@@ -139,5 +137,11 @@ if args.gamma == -1:
 
 if args.mm:
     args.mixup = True
-    
+
+if args.wd == -1:
+    if args.lr>0: #SGD
+        args.wd = 5e-4
+    else: #Adam
+        args.wd = 0 
+
 print("args, ", end='')

@@ -340,6 +340,66 @@ def miniImageNet(use_hd = True):
     return (train_loader, train_clean, val_loader, test_loader), [3, 84, 84], (64, 16, 20, 600), True, False
 
 
+class myImagenetDataset(datasets.ImageNet):
+    """
+    Custom imageNet dataset class in case we want to modify it
+    """
+    def __init__(self, root, split, **kwargs):
+        super().__init__(root, split, **kwargs)
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+        Returns:
+            tuple: (sample, target) where target is class_index of the target class.
+        """
+        path, target = self.samples[index]
+        sample = self.loader(path)
+        
+        if self.transform is not None:
+            sample = self.transform(sample)
+        
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+        return sample, target
+
+def imageNet(use_hd=True):  
+    """
+    Loads the ImageNet dataset
+    """
+    norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+    train_transforms = transforms.Compose([
+        transforms.RandomResizedCrop(224),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        norm])
+
+    all_transforms = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(), 
+        norm,
+    ])
+
+    train_clean_transforms = all_transforms if args.sample_aug==1 else transforms.Compose([transforms.RandomResizedCrop(224), transforms.ToTensor(), norm]) 
+    
+    train_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=train_transforms)
+    train_clean_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=train_clean_transforms)
+
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= min(8, os.cpu_count()), pin_memory=True)
+    train_clean_loader = torch.utils.data.DataLoader(
+        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
+
+    test_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='val', transform=all_transforms)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
+
+    return (train_loader, test_loader, test_loader), [3, 224, 224], 1000, False, True
+
 def tieredImageNet(use_hd=True):
     """
     tiredImagenet dataset
@@ -607,6 +667,8 @@ def get_dataset(dataset_name):
         return fashion_mnist()
     elif dataset_name.lower() == "miniimagenet":
         return miniImageNet()
+    elif dataset_name.lower() == "imagenet":
+        return imageNet()
     elif dataset_name.lower() == "miniimagenet84":
         return miniImageNet84()
     elif dataset_name.lower() == "cubfs":
