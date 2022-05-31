@@ -106,7 +106,7 @@ class myImagenetDataset(datasets.ImageNet):
             tuple: (sample, target) where target is class_index of the target class.
         """
         path, target = self.samples[index]
-        elt = self.loader(path)
+        elt = transforms.ToTensor()(self.loader(path))
         if self.target_transform is not None:
             target = self.target_transform(target)
         
@@ -130,9 +130,9 @@ def imageNet(closest_crops=None, use_hd = True, K_resize=224, centroids=None, ba
 
     # Random crops generation
     if closest_crops == None and centroids == None:
-        train_transforms = transforms.Compose([transforms.RandomResizedCrop(K_resize), transforms.ToTensor(), norm])
+        train_transforms = transforms.Compose([transforms.RandomResizedCrop(K_resize), norm])
     else:
-        train_transforms = [transforms.RandomResizedCrop(K_resize), transforms.Resize([K_resize, K_resize]), transforms.ToTensor(), norm]
+        train_transforms = [transforms.RandomResizedCrop(K_resize), transforms.Resize([K_resize, K_resize]), norm]
 
     train_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='train', transform=train_transforms, closest_crops=closest_crops, K_resize=K_resize, centroids=centroids)
 
@@ -179,7 +179,7 @@ class CPUDataset():
 def iterator(data, target, transforms, forcecpu = False, shuffle = True, use_hd = False, closest_crops=None, centroids=None, K_resize=0, batch_size=args.batch_size):
     if args.dataset_device == "cpu" or forcecpu:
         dataset = CPUDataset(data, target, transforms, use_hd = use_hd, closest_crops=closest_crops, centroids=centroids, K_resize=K_resize)
-        return torch.utils.data.DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, num_workers = min(8, os.cpu_count()))
+        return torch.utils.data.DataLoader(dataset, batch_size = batch_size, shuffle = shuffle, num_workers = min(os.cpu_count(), 1))
     else:
         return Dataset(data, target, transforms, shuffle = shuffle)
 
@@ -244,7 +244,7 @@ def get_features(model, loader, elements_per_class, n_aug = args.sample_aug, siz
     centroids = torch.zeros(nb_classes, dim).to(args.device)
     for aug in tqdm(range(n_aug)):
         for batch_idx, (data, target) in enumerate(loader):    
-            print(f'aug: {aug}, batch: {batch_idx}/{size[0]//args.batch_size}',end='\r')
+            print(f'aug: {aug}, batch: {batch_idx}/{size[0]//args.batch_fs}',end='\r')
             with torch.no_grad():
                 data, target = data.to(args.device), target.to(args.device)
                 _, features = model(data)
@@ -293,8 +293,8 @@ if __name__ == '__main__':
     print('seed:', args.seed)
     dataset = {'miniimagenetstandard': miniImageNet_standardTraining, 'imagenet': imageNet}[args.dataset.lower()]
 
-    loader, size, elements_per_class = dataset(closest_crops=None, centroids=None)
-    AS_n_aug = 50
+    loader, size, elements_per_class = dataset(closest_crops=None, centroids=None, batch_size=args.batch_fs)
+    AS_n_aug = 1
 
     # Get the model 
     if args.model.lower() == 'resnet12':
