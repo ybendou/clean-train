@@ -398,7 +398,7 @@ def imageNet(use_hd=True):
     test_loader = torch.utils.data.DataLoader(
         test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= min(8, os.cpu_count()), pin_memory=True)
 
-    return (train_loader, train_clean_loader, test_loader, test_loader), [3, 224, 224], 1000, False, True
+    return (train_loader, test_loader, test_loader), [3, 224, 224], 1000, False, True
 
 def tieredImageNet(use_hd=True):
     """
