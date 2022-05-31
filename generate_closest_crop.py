@@ -124,7 +124,9 @@ class myImagenetDataset(datasets.ImageNet):
             return elt, target
 
 def imageNet(closest_crops=None, use_hd = True, K_resize=224, centroids=None, batch_size=args.batch_size):
-   
+    """
+    Load the ImageNet dataset.
+    """
     norm = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
@@ -253,9 +255,6 @@ def get_features(model, loader, elements_per_class, n_aug = args.sample_aug, siz
                 targets_tmp = target.view(target.shape[0], 1).expand(-1, features.shape[1]).long() 
                 centroids.scatter_add(0, targets_tmp, features/nb_elements_per_class) # average features to get centroids on the fly, devide here to avoid large numbers
                 
-                #for idx, t in enumerate(target):
-                #    centroids[t] += features[idx]/nb_elements_per_class 
-                
     print(".", end='')
     return centroids/n_aug
 
@@ -294,7 +293,7 @@ if __name__ == '__main__':
     dataset = {'miniimagenetstandard': miniImageNet_standardTraining, 'imagenet': imageNet}[args.dataset.lower()]
 
     loader, size, elements_per_class = dataset(closest_crops=None, centroids=None, batch_size=args.batch_fs)
-    AS_n_aug = 1
+    AS_n_aug = 50
 
     # Get the model 
     if args.model.lower() == 'resnet12':
