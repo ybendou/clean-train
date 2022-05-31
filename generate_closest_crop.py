@@ -292,7 +292,7 @@ if __name__ == '__main__':
         import wandb
         wandb.init(project=args.wandbProjectName, 
             entity=args.wandb, 
-            tags=tag, 
+            tags=[args.tag], 
             config=vars(args)
             )
 
