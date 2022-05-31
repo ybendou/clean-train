@@ -512,11 +512,11 @@ def imageNet(use_hd=True):
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
     train_clean_loader = torch.utils.data.DataLoader(
-        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers= num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
+        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
 
     test_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='val', transform=all_transforms)
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
+        test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
 
     return (train_loader, train_clean_loader, test_loader, test_loader), [3, 224, 224], 1000, False, True
 
