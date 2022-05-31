@@ -29,28 +29,47 @@ if args.wandb:
     import wandb
 
 
-
 ### global variables that are used by the train function
 last_update, criterion = 0, torch.nn.CrossEntropyLoss()
 
 ### function to either use criterion based on output and target or criterion_episodic based on features and target
-def crit(output, features, target):
+def crit(output, features, target, NIOU=None, tracker=None):
     if args.episodic:
         return criterion_episodic(features, target)
     else:
         if args.label_smoothing > 0:
             criterion = LabelSmoothingLoss(num_classes = num_classes, smoothing = args.label_smoothing)
         else:
-            criterion = torch.nn.CrossEntropyLoss()
-        return criterion(output, target)
+            if NIOU is None:
+                criterion = torch.nn.CrossEntropyLoss()
+                return criterion(output, target)
+            else:
+                
+                criterion = torch.nn.CrossEntropyLoss(reduction='none')
+                NIOU_mean_class = tracker(NIOU, target)
+                prior = NIOU/NIOU_mean_class # prior is the ratio of the NIOU of the class to the mean NIOU of the class
+                loss = criterion(output, target)*prior
+                return loss.mean()
+        
 
 ### main train function
 def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = False):
     model.train()
     global last_update
     losses, total = 0., 0
+    NIOU = None
+    tracker = None
+    # If crop sampling, initilize a tracker to track the mean class NIOU
+    if args.crop_sampler:
+        from utils import NIOUTracker
+        tracker = NIOUTracker(num_classes)
+        tracker.to(args.device)
+        tracker.train()
+
     for batch_idx, (data, target) in enumerate(train_loader):
-            
+        if args.crop_sampler: 
+            NIOU = target[:,1].to(args.device)
+            target = target[:,0].long()
         data, target = data.to(args.device), target.to(args.device)
         # reset gradients
         optimizer.zero_grad()
@@ -90,16 +109,16 @@ def train(model, train_loader, optimizer, epoch, scheduler, mixup = False, mm = 
                 output, features = model(data_mixed)
             if args.rotations:
                 output, output_rot = output
-                loss = ((lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])) + (lam * crit(output_rot, features, target_rot) + (1 - lam) * crit(output_rot, features, target_rot[index_mixup]))) / 2
+                loss = ((lam * crit(output, features, target, NIOU, tracker) + (1 - lam) * crit(output, features, target[index_mixup], NIOU, tracker)) + (lam * crit(output_rot, features, target_rot, NIOU, tracker) + (1 - lam) * crit(output_rot, features, target_rot[index_mixup], NIOU, tracker))) / 2
             else:
-                loss = lam * crit(output, features, target) + (1 - lam) * crit(output, features, target[index_mixup])
+                loss = lam * crit(output, features, target, NIOU, tracker) + (1 - lam) * crit(output, features, target[index_mixup], NIOU, tracker)
         else:
             output, features = model(data)
             if args.rotations:
                 output, output_rot = output
-                loss = 0.5 * crit(output, features, target) + 0.5 * crit(output_rot, features, target_rot)                
+                loss = 0.5 * crit(output, features, target, NIOU, tracker) + 0.5 * crit(output_rot, features, target_rot, NIOU, tracker)                
             else:
-                loss = crit(output, features, target)
+                loss = crit(output, features, target, NIOU, tracker)
 
         # backprop loss
         loss.backward()

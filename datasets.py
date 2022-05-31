@@ -44,12 +44,9 @@ def select_crop(elt, transformations, closest_crop):
     crop = transformations[0]
     params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
     NIOU = normalized_bb_intersection_over_union(closest_crop, params)
-    while NIOU < args.niou_treshold:
-        params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
-        NIOU = normalized_bb_intersection_over_union(closest_crop, params)
     elt = transforms.functional.crop(elt, *params)
     elt = torch.nn.Sequential(*transformations[1:])(elt)
-    return elt
+    return elt, NIOU
 
 class CPUDataset():
     def __init__(self, data, targets, transforms = [], batch_size = args.batch_size, use_hd = False, crop_sampler=False):
@@ -72,8 +69,8 @@ class CPUDataset():
         else:
             elt = self.data[idx]
         if self.crop_sampler:
-            elt = select_crop(elt, self.transforms, self.closest_crops[idx])
-            return elt, self.targets[idx]
+            elt, NIOU = select_crop(elt, self.transforms, self.closest_crops[idx])
+            return elt, torch.Tensor([self.targets[idx], NIOU])
         else:
             elt = self.transforms(elt)
             return elt, self.targets[idx]
@@ -512,11 +509,11 @@ def imageNet(use_hd=True):
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
     train_clean_loader = torch.utils.data.DataLoader(
-        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers= num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
+        train_clean_dataset, batch_size=args.batch_size, shuffle=False,num_workers=os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
 
     test_dataset = myImagenetDataset(os.path.join(args.dataset_path,'imagenet'), split='val', transform=all_transforms)
     test_loader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=args.batch_size, shuffle=False,num_workers= num_workers= os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
+        test_dataset, batch_size=args.batch_size, shuffle=False,num_workers=os.cpu_count() if args.max_workers else min(8, os.cpu_count()), pin_memory=True)
 
     return (train_loader, train_clean_loader, test_loader, test_loader), [3, 224, 224], 1000, False, True
 

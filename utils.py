@@ -115,4 +115,27 @@ class LabelSmoothingLoss(nn.Module):
             true_dist.scatter_(1, target.data.unsqueeze(1), 1 - self.smoothing)
         return torch.mean(torch.sum(-true_dist * pred, dim=-1))
 
+
+class NIOUTracker(nn.Module):
+    def __init__(self, num_classes):
+        super(NIOUTracker, self).__init__()
+        self.bnn_classes=[nn.BatchNorm1d(1, affine=False).to(args.device) for c in range(num_classes)]
+        self.mean_class_NIOU= [0]*num_classes
+        self.num_classes = num_classes
+
+    def forward(self, NIOU, target):
+        """
+        Track the mean NIOU of each class using batchNorm
+        """
+        for c in range(self.num_classes):
+            if c in target:
+                class_NIOU = NIOU[torch.where(target==c)].unsqueeze(1)
+                if class_NIOU.shape[0]==1: # quick hack for when nb of samples is 1
+                    class_NIOU = class_NIOU.repeat(2,1)
+                _ = self.bnn_classes[c](class_NIOU)
+            self.mean_class_NIOU[c] = self.bnn_classes[c].running_mean
+
+        return torch.cat([self.mean_class_NIOU[c] for c in target])+10e-5
+
+
 print("utils, ", end='')
