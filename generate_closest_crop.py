@@ -288,6 +288,14 @@ def generate_closest_crop_to_centroid(model, centroids, dataset, size):
     return best_params
 
 if __name__ == '__main__':
+    if args.wandb:
+        import wandb
+        wandb.init(project=args.wandbProjectName, 
+            entity=args.wandb, 
+            tags=tag, 
+            config=vars(args)
+            )
+
     fix_seed(args.seed)
     print('seed:', args.seed)
     dataset = {'miniimagenetstandard': miniImageNet_standardTraining, 'imagenet': imageNet}[args.dataset.lower()]
@@ -337,5 +345,6 @@ if __name__ == '__main__':
             centroids = new_centroids
 
     torch.save(closest_crops, args.closest_crops)
-
+    if args.wandb:
+        wandb.finish()
     
