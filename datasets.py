@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import json
 import os
-
+import math
 
 def normalized_bb_intersection_over_union(boxAA, boxBB):
     """
@@ -39,13 +39,14 @@ def normalized_bb_intersection_over_union(boxAA, boxBB):
     # return the intersection over union value
     return iou
 
-def select_crop(elt, transformations, closest_crop):
+def select_crop(elt, transformations, closest_crop, beta=10):
     h, w = elt.shape[-2],  elt.shape[-1]
     crop = transformations[0]
     params = crop.get_params(elt, scale=(0.08,1), ratio=(0.75, 1.333333)) # sample some parameter
     NIOU = normalized_bb_intersection_over_union(closest_crop, params)
     elt = transforms.functional.crop(elt, *params)
     elt = torch.nn.Sequential(*transformations[1:])(elt)
+    NIOU = 1/(1+math.exp(-beta*(NIOU-args.niou_treshold))) # make the distribution more like a sigmoid
     return elt, NIOU
 
 class CPUDataset():
