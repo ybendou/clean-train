@@ -92,7 +92,7 @@ class ResNet(nn.Module):
         if mixup_layer == 0:
             out = lam * out + (1 - lam) * out[index_mixup]
         out = self.relu(self.bn1(self.conv1(out)))
-        if self.input_shape>self.min_size:
+        if self.input_shape[1]>self.min_size:
             out = self.max_pool(out)
         for i in range(len(self.layers)):
             out = self.layers[i](out)
