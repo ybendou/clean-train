@@ -60,12 +60,12 @@ class Bottleneck(nn.Module):
         return x
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, feature_maps, input_shape, num_classes, few_shot, rotations):
+    def __init__(self, block, num_blocks, feature_maps, input_shape, num_classes, few_shot, rotations, min_size=100):
         super(ResNet, self).__init__()
         self.in_channels = feature_maps
         self.rotations = rotations
         self.input_shape = input_shape
-        self.min_size = 100
+        self.min_size = min_size
         if input_shape[1]>self.min_size:
             self.conv1 = nn.Conv2d(input_shape[0], feature_maps, kernel_size=7, stride=2, padding=3, bias=False) # kernel size 7 instead of 3 
         else:
