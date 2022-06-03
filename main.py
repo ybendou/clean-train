@@ -18,7 +18,6 @@ import few_shot_eval
 import resnet
 import wideresnet
 import resnet12
-import resnet50
 import s2m2
 import mlp
 print("models.")
@@ -358,7 +357,7 @@ def create_model():
     if args.model.lower() == "resnet20":
         return resnet.ResNet20(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)
     if args.model.lower() == "resnet50":
-        return resnet50.ResNet50(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)   
+        return resnet.ResNet50(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)   
     if args.model.lower() == "wideresnet":
         return wideresnet.WideResNet(args.feature_maps, input_shape, few_shot, args.rotations, num_classes = num_classes).to(args.device)
     if args.model.lower() == "resnet12":
