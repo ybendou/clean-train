@@ -134,3 +134,6 @@ def ResNet20(feature_maps, input_shape, num_classes, few_shot, rotations):
 
 def ResNet50(feature_maps, input_shape, num_classes, few_shot, rotations):
     return ResNet(Bottleneck, [3,4,6,3], feature_maps, input_shape, num_classes, few_shot, rotations)
+
+def ResNet56(feature_maps, input_shape, num_classes, few_shot, rotations):
+    return ResNet(BasicBlock, [9, 9, 9], feature_maps, input_shape, num_classes, few_shot, rotations)
