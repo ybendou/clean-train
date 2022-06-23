@@ -137,3 +137,10 @@ def ResNet50(feature_maps, input_shape, num_classes, few_shot, rotations):
 
 def ResNet56(feature_maps, input_shape, num_classes, few_shot, rotations):
     return ResNet(BasicBlock, [9, 9, 9], feature_maps, input_shape, num_classes, few_shot, rotations)
+
+def resnet110(feature_maps, input_shape, num_classes, few_shot, rotations):
+    return ResNet(BasicBlock, [18, 18, 18], feature_maps, input_shape, num_classes, few_shot, rotations)
+
+def resnet1202(feature_maps, input_shape, num_classes, few_shot, rotations):
+    return ResNet(BasicBlock, [200, 200, 200], feature_maps, input_shape, num_classes, few_shot, rotations)
+

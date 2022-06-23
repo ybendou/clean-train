@@ -360,6 +360,10 @@ def create_model():
         return resnet.ResNet50(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)   
     if args.model.lower() == "resnet56":
         return resnet.ResNet56(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)   
+    if args.model.lower() == "resnet110":
+        return resnet.ResNet110(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)   
+    if args.model.lower() == "resnet1202":
+        return resnet.ResNet1202(args.feature_maps, input_shape, num_classes, few_shot, args.rotations).to(args.device)   
     if args.model.lower() == "wideresnet":
         return wideresnet.WideResNet(args.feature_maps, input_shape, few_shot, args.rotations, num_classes = num_classes).to(args.device)
     if args.model.lower() == "resnet12":
